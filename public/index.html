@@ -1,151 +1,154 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<title>四六级作文AI评分</title>
-
-<style>
-body{
-    font-family: Arial, Helvetica, sans-serif;
-    background:#f5f6fa;
-    margin:0;
-    padding:40px;
-}
-
-.container{
-    max-width:800px;
-    margin:auto;
-    background:white;
-    padding:30px;
-    border-radius:10px;
-    box-shadow:0 5px 20px rgba(0,0,0,0.1);
-}
-
-h1{
-    text-align:center;
-}
-
-textarea{
-    width:100%;
-    height:200px;
-    padding:10px;
-    font-size:16px;
-    border-radius:6px;
-    border:1px solid #ccc;
-    resize:vertical;
-}
-
-button{
-    margin-top:15px;
-    padding:12px 25px;
-    font-size:16px;
-    background:#4a6cf7;
-    color:white;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-}
-
-button:hover{
-    background:#364fc7;
-}
-
-#result{
-    margin-top:25px;
-    padding:20px;
-    background:#f8f9fa;
-    border-radius:6px;
-    white-space:pre-wrap;
-    line-height:1.6;
-}
-
-.counter{
-    font-size:14px;
-    color:#666;
-    text-align:right;
-    margin-top:5px;
-}
-
-.loading{
-    color:#999;
-}
-</style>
-
-</head>
-<body>
-
-<div class="container">
-
-<h1>AI 四六级作文评分</h1>
-
-<textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
-
-<div class="counter" id="counter">0 字</div>
-
-<button id="btn">开始评分</button>
-
-<div id="result"></div>
-
-</div>
-
-<script>
-
-const textarea = document.getElementById("essay");
-const result = document.getElementById("result");
-const button = document.getElementById("btn");
-const counter = document.getElementById("counter");
-
-textarea.addEventListener("input", ()=>{
-    counter.innerText = textarea.value.length + " 字";
-});
-
-button.onclick = async () => {
-
-    const essay = textarea.value.trim();
-
-    if(essay.length < 20){
-        alert("作文太短了");
-        return;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 四六级作文评分</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f6fa;
+      margin: 0;
+      padding: 40px;
     }
 
-    button.disabled = true;
-    button.innerText = "AI评分中...";
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    }
 
-    result.innerHTML = '<span class="loading">AI正在评分，请稍等...</span>';
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
 
-    try{
+    textarea {
+      width: 100%;
+      height: 220px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      box-sizing: border-box;
+    }
 
-        const response = await fetch("/score",{
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify({essay})
+    button {
+      margin-top: 15px;
+      padding: 12px 25px;
+      font-size: 16px;
+      background: #4a6cf7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #364fc7;
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #result {
+      margin-top: 25px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      min-height: 120px;
+    }
+
+    .counter {
+      font-size: 14px;
+      color: #666;
+      text-align: right;
+      margin-top: 5px;
+    }
+
+    .loading {
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI 四六级作文评分</h1>
+
+    <textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
+    <div class="counter" id="counter">0 字</div>
+
+    <button id="btn">开始评分</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const textarea = document.getElementById("essay");
+    const result = document.getElementById("result");
+    const button = document.getElementById("btn");
+    const counter = document.getElementById("counter");
+
+    textarea.addEventListener("input", () => {
+      counter.innerText = textarea.value.length + " 字";
+    });
+
+    button.onclick = async () => {
+      const essay = textarea.value.trim();
+
+      if (essay.length < 20) {
+        alert("作文太短了");
+        return;
+      }
+
+      button.disabled = true;
+      button.innerText = "AI评分中...";
+      result.innerHTML = '<span class="loading">AI正在评分，请稍等...</span>';
+
+      try {
+        const response = await fetch("/score", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ essay })
         });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          result.innerText = errText || "请求失败，请检查服务器";
+          button.disabled = false;
+          button.innerText = "重新评分";
+          return;
+        }
 
         result.innerText = "";
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder("utf-8");
 
-        while(true){
-            const {value,done} = await reader.read();
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
 
-            if(done) break;
-
-            const text = decoder.decode(value);
-            result.innerText += text;
+          const text = decoder.decode(value, { stream: true });
+          result.innerText += text;
         }
-
-    }catch(e){
+      } catch (e) {
         result.innerText = "请求失败，请检查服务器";
-    }
+      }
 
-    button.disabled = false;
-    button.innerText = "重新评分";
-}
-
-</script>
-
+      button.disabled = false;
+      button.innerText = "重新评分";
+    };
+  </script>
 </body>
 </html>
