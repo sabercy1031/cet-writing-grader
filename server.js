@@ -2,16 +2,50 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const publicDir = path.resolve(__dirname, "public");
+const indexPath = path.resolve(publicDir, "index.html");
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+
+app.use((req, res, next) => {
+  console.log(`[REQ] ${req.method} ${req.url}`);
+  next();
+});
+
+app.use(express.static(publicDir));
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    port: PORT,
+    publicDir,
+    indexExists: fs.existsSync(indexPath)
+  });
+});
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  console.log("[ROOT] trying to send:", indexPath);
+
+  if (!fs.existsSync(indexPath)) {
+    console.error("[ROOT] index.html not found:", indexPath);
+    return res.status(500).send("index.html not found");
+  }
+
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error("[ROOT] sendFile error:", err);
+      if (!res.headersSent) {
+        res.status(500).send("sendFile failed");
+      }
+    } else {
+      console.log("[ROOT] index.html sent successfully");
+    }
+  });
 });
 
 app.post("/score", async (req, res) => {
@@ -91,7 +125,7 @@ ${essay}
 
     res.end();
   } catch (error) {
-    console.error("DeepSeek错误:", error);
+    console.error("[SCORE] DeepSeek错误:", error);
 
     if (!res.headersSent) {
       res.status(500).send("AI评分失败，请检查服务器。");
@@ -103,5 +137,8 @@ ${essay}
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("Server running on port " + PORT);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`publicDir = ${publicDir}`);
+  console.log(`indexPath = ${indexPath}`);
+  console.log(`index exists = ${fs.existsSync(indexPath)}`);
 });
