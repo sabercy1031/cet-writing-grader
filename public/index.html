@@ -19,6 +19,7 @@
       padding: 30px;
       border-radius: 10px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+      position: relative;
     }
 
     h1 {
@@ -57,16 +58,6 @@
       cursor: not-allowed;
     }
 
-    #result {
-      margin-top: 25px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-      min-height: 120px;
-    }
-
     .counter {
       font-size: 14px;
       color: #666;
@@ -74,8 +65,44 @@
       margin-top: 5px;
     }
 
+    #resultWrap {
+      margin-top: 25px;
+      position: relative;
+    }
+
+    #result {
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      min-height: 140px;
+      max-height: 420px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
     .loading {
       color: #999;
+    }
+
+    #scrollToBottomBtn {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      display: none;
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 999px;
+      background: #4a6cf7;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+
+    #scrollToBottomBtn:hover {
+      background: #364fc7;
     }
   </style>
 </head>
@@ -88,7 +115,10 @@
 
     <button id="btn">开始评分</button>
 
-    <div id="result"></div>
+    <div id="resultWrap">
+      <div id="result"></div>
+      <button id="scrollToBottomBtn">回到底部</button>
+    </div>
   </div>
 
   <script>
@@ -96,9 +126,60 @@
     const result = document.getElementById("result");
     const button = document.getElementById("btn");
     const counter = document.getElementById("counter");
+    const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
+
+    let autoFollow = true;
+    let isStreaming = false;
+
+    function scrollResultToBottom(force = false) {
+      if (force || autoFollow) {
+        result.scrollTop = result.scrollHeight;
+      }
+    }
+
+    function isNearBottom() {
+      return result.scrollHeight - result.scrollTop - result.clientHeight < 40;
+    }
+
+    function updateScrollButton() {
+      if (isStreaming && !autoFollow) {
+        scrollToBottomBtn.style.display = "block";
+      } else {
+        scrollToBottomBtn.style.display = "none";
+      }
+    }
 
     textarea.addEventListener("input", () => {
       counter.innerText = textarea.value.length + " 字";
+    });
+
+    result.addEventListener("scroll", () => {
+      if (!isStreaming) return;
+
+      if (isNearBottom()) {
+        autoFollow = true;
+      } else {
+        autoFollow = false;
+      }
+
+      updateScrollButton();
+    });
+
+    result.addEventListener("wheel", () => {
+      if (!isStreaming) return;
+
+      setTimeout(() => {
+        if (!isNearBottom()) {
+          autoFollow = false;
+        }
+        updateScrollButton();
+      }, 0);
+    });
+
+    scrollToBottomBtn.addEventListener("click", () => {
+      autoFollow = true;
+      scrollResultToBottom(true);
+      updateScrollButton();
     });
 
     button.onclick = async () => {
@@ -113,6 +194,10 @@
       button.innerText = "AI评分中...";
       result.innerHTML = '<span class="loading">AI正在评分，请稍等...</span>';
 
+      autoFollow = true;
+      isStreaming = true;
+      updateScrollButton();
+
       try {
         const response = await fetch("/score", {
           method: "POST",
@@ -125,12 +210,16 @@
         if (!response.ok) {
           const errText = await response.text();
           result.innerText = errText || "请求失败，请检查服务器";
+          isStreaming = false;
+          autoFollow = true;
+          updateScrollButton();
           button.disabled = false;
           button.innerText = "重新评分";
           return;
         }
 
         result.innerText = "";
+        scrollResultToBottom(true);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
@@ -141,10 +230,17 @@
 
           const text = decoder.decode(value, { stream: true });
           result.innerText += text;
+          scrollResultToBottom();
+          updateScrollButton();
         }
       } catch (e) {
         result.innerText = "请求失败，请检查服务器";
       }
+
+      isStreaming = false;
+      autoFollow = true;
+      scrollResultToBottom(true);
+      updateScrollButton();
 
       button.disabled = false;
       button.innerText = "重新评分";
