@@ -1,19 +1,14 @@
 {
   "name": "cet-writing-grader",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI CET-4 CET-6 essay grading tool",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "openai": "^6.27.0"
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "openai": "^4.67.3"
   }
 }
