@@ -1,339 +1,151 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CET写作评分器</title>
-  <style>
-    body {
-      font-family: "Microsoft YaHei", sans-serif;
-      background: #f5f6fa;
-      margin: 0;
-      padding: 0;
-    }
+<meta charset="UTF-8">
+<title>四六级作文AI评分</title>
 
-    .container {
-      width: 90%;
-      max-width: 900px;
-      margin: 40px auto;
-      background: white;
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      box-sizing: border-box;
-    }
+<style>
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    background:#f5f6fa;
+    margin:0;
+    padding:40px;
+}
 
-    h1 {
-      text-align: center;
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
+.container{
+    max-width:800px;
+    margin:auto;
+    background:white;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.1);
+}
 
-    .subtitle {
-      text-align: center;
-      color: #666;
-      margin-bottom: 30px;
-    }
+h1{
+    text-align:center;
+}
 
-    textarea {
-      width: 100%;
-      height: 260px;
-      padding: 18px;
-      font-size: 18px;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      resize: vertical;
-      box-sizing: border-box;
-      line-height: 1.7;
-      outline: none;
-    }
+textarea{
+    width:100%;
+    height:200px;
+    padding:10px;
+    font-size:16px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    resize:vertical;
+}
 
-    textarea:focus {
-      border-color: #5b5df0;
-      box-shadow: 0 0 0 3px rgba(91, 93, 240, 0.1);
-    }
+button{
+    margin-top:15px;
+    padding:12px 25px;
+    font-size:16px;
+    background:#4a6cf7;
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
 
-    .info {
-      margin-top: 12px;
-      color: #666;
-      font-size: 14px;
-    }
+button:hover{
+    background:#364fc7;
+}
 
-    .btn-wrap {
-      text-align: center;
-      margin: 28px 0;
-    }
+#result{
+    margin-top:25px;
+    padding:20px;
+    background:#f8f9fa;
+    border-radius:6px;
+    white-space:pre-wrap;
+    line-height:1.6;
+}
 
-    button {
-      background: #5b5df0;
-      color: white;
-      border: none;
-      padding: 14px 32px;
-      border-radius: 12px;
-      font-size: 18px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+.counter{
+    font-size:14px;
+    color:#666;
+    text-align:right;
+    margin-top:5px;
+}
 
-    button:hover {
-      opacity: 0.92;
-    }
+.loading{
+    color:#999;
+}
+</style>
 
-    button:disabled {
-      background: #999;
-      cursor: not-allowed;
-    }
-
-    #resultBox {
-      margin-top: 20px;
-      background: #fafafa;
-      border: 1px solid #e5e5e5;
-      border-radius: 14px;
-      padding: 24px;
-      min-height: 180px;
-      white-space: pre-wrap;
-      line-height: 1.9;
-      font-size: 18px;
-      word-break: break-word;
-      position: relative;
-    }
-
-    .loading {
-      color: #5b5df0;
-      font-weight: bold;
-    }
-
-    .typing-cursor {
-      display: inline-block;
-      width: 10px;
-      margin-left: 2px;
-      animation: blink 1s infinite;
-      color: #5b5df0;
-      font-weight: bold;
-    }
-
-    #scrollToBottomBtn {
-      position: fixed;
-      right: 24px;
-      bottom: 24px;
-      border: none;
-      background: #5b5df0;
-      color: white;
-      font-size: 15px;
-      font-weight: bold;
-      padding: 12px 16px;
-      border-radius: 999px;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-      cursor: pointer;
-      display: none;
-      z-index: 999;
-      transition: opacity 0.2s ease, transform 0.2s ease;
-    }
-
-    #scrollToBottomBtn:hover {
-      opacity: 0.92;
-      transform: translateY(-2px);
-    }
-
-    @keyframes blink {
-      0%, 50% {
-        opacity: 1;
-      }
-      50.01%, 100% {
-        opacity: 0;
-      }
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>CET-4 / CET-6 人工智能作文评分器</h1>
-    <div class="subtitle">请将你的英文作文粘贴到下方，然后点击评分。</div>
 
-    <textarea id="essayInput" placeholder="请在这里粘贴你的英文作文..."></textarea>
-    <div class="info" id="wordCount">当前单词数：0</div>
+<div class="container">
 
-    <div class="btn-wrap">
-      <button id="scoreBtn" onclick="scoreEssay()">为我的文章评分</button>
-    </div>
+<h1>AI 四六级作文评分</h1>
 
-    <div id="resultBox">评分结果将显示在这里。</div>
-  </div>
+<textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
 
-  <button id="scrollToBottomBtn" title="回到底部">回到底部</button>
+<div class="counter" id="counter">0 字</div>
 
-  <script>
-    const essayInput = document.getElementById("essayInput");
-    const resultBox = document.getElementById("resultBox");
-    const scoreBtn = document.getElementById("scoreBtn");
-    const wordCount = document.getElementById("wordCount");
-    const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
+<button id="btn">开始评分</button>
 
-    let autoScrollEnabled = true;
-    let streamingActive = false;
-    let currentResultText = "";
-    let programmaticScroll = false;
+<div id="result"></div>
 
-    essayInput.addEventListener("input", () => {
-      const essay = essayInput.value.trim();
-      const words = essay ? essay.split(/\s+/).filter(Boolean).length : 0;
-      wordCount.innerText = `当前单词数：${words}`;
-    });
+</div>
 
-    function distanceFromBottom() {
-      return document.body.scrollHeight - (window.innerHeight + window.scrollY);
-    }
+<script>
 
-    function isNearBottom() {
-      return distanceFromBottom() <= 120;
-    }
+const textarea = document.getElementById("essay");
+const result = document.getElementById("result");
+const button = document.getElementById("btn");
+const counter = document.getElementById("counter");
 
-    function scrollToBottom(forceSmooth = false) {
-      programmaticScroll = true;
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: forceSmooth ? "smooth" : "auto"
-      });
-      setTimeout(() => {
-        programmaticScroll = false;
-      }, forceSmooth ? 400 : 80);
-    }
+textarea.addEventListener("input", ()=>{
+    counter.innerText = textarea.value.length + " 字";
+});
 
-    function updateScrollButton() {
-      if (!isNearBottom()) {
-        scrollToBottomBtn.style.display = "block";
-      } else {
-        scrollToBottomBtn.style.display = "none";
-      }
-    }
+button.onclick = async () => {
 
-    function renderStreamingContent() {
-      if (streamingActive) {
-        resultBox.innerHTML =
-          escapeHtml(currentResultText) +
-          '<span class="typing-cursor">|</span>';
-      } else {
-        resultBox.innerText = currentResultText;
-      }
-    }
+    const essay = textarea.value.trim();
 
-    function escapeHtml(text) {
-      const div = document.createElement("div");
-      div.innerText = text;
-      return div.innerHTML;
-    }
-
-    window.addEventListener("scroll", () => {
-      if (programmaticScroll) return;
-
-      if (streamingActive) {
-        if (!isNearBottom()) {
-          autoScrollEnabled = false;
-        } else {
-          autoScrollEnabled = true;
-        }
-      }
-
-      updateScrollButton();
-    });
-
-    window.addEventListener("wheel", (event) => {
-      if (!streamingActive) return;
-      if (event.deltaY < -3) {
-        autoScrollEnabled = false;
-        updateScrollButton();
-      }
-    }, { passive: true });
-
-    window.addEventListener("touchmove", () => {
-      if (!streamingActive) return;
-      if (!isNearBottom()) {
-        autoScrollEnabled = false;
-        updateScrollButton();
-      }
-    }, { passive: true });
-
-    scrollToBottomBtn.addEventListener("click", () => {
-      autoScrollEnabled = true;
-      scrollToBottom(true);
-      updateScrollButton();
-    });
-
-    async function scoreEssay() {
-      const essay = essayInput.value.trim();
-
-      if (essay.length < 20) {
-        alert("请输入更长一点的英文作文。");
+    if(essay.length < 20){
+        alert("作文太短了");
         return;
-      }
+    }
 
-      scoreBtn.disabled = true;
-      scoreBtn.innerText = "评分中...";
-      streamingActive = true;
-      autoScrollEnabled = true;
-      currentResultText = "";
+    button.disabled = true;
+    button.innerText = "AI评分中...";
 
-      resultBox.innerHTML = '<span class="loading">正在评分中，请稍等...</span><span class="typing-cursor">|</span>';
+    result.innerHTML = '<span class="loading">AI正在评分，请稍等...</span>';
 
-      resultBox.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
+    try{
 
-      setTimeout(() => {
-        scrollToBottom(false);
-        updateScrollButton();
-      }, 300);
-
-      try {
-        const response = await fetch("http://localhost:3000/score", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ essay: essay })
+        const response = await fetch("/score",{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({essay})
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          streamingActive = false;
-          currentResultText = errorText || "评分失败。";
-          renderStreamingContent();
-          updateScrollButton();
-          return;
-        }
+        result.innerText = "";
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
+        const decoder = new TextDecoder();
 
-        currentResultText = "";
-        renderStreamingContent();
+        while(true){
+            const {value,done} = await reader.read();
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
+            if(done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          currentResultText += chunk;
-          renderStreamingContent();
-
-          if (autoScrollEnabled) {
-            scrollToBottom(false);
-          }
-
-          updateScrollButton();
+            const text = decoder.decode(value);
+            result.innerText += text;
         }
-      } catch (error) {
-        console.error(error);
-        currentResultText = "连接服务器失败。";
-      } finally {
-        streamingActive = false;
-        renderStreamingContent();
-        updateScrollButton();
-        scoreBtn.disabled = false;
-        scoreBtn.innerText = "为我的文章评分";
-      }
+
+    }catch(e){
+        result.innerText = "请求失败，请检查服务器";
     }
-  </script>
+
+    button.disabled = false;
+    button.innerText = "重新评分";
+}
+
+</script>
+
 </body>
 </html>

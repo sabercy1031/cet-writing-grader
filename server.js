@@ -4,7 +4,7 @@ const OpenAI = require("openai");
 const path = require("path");
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // 中间件
 app.use(cors());
@@ -13,10 +13,10 @@ app.use(express.json());
 // 让服务器可以访问 public 文件夹里的网页
 app.use(express.static(path.join(__dirname, "public")));
 
-// DeepSeek API
+// 从 Railway 环境变量读取 DeepSeek API Key
 const client = new OpenAI({
   baseURL: "https://api.deepseek.com",
-  apiKey: "sk-c57dd6fb878747938c3444e7d275997a"
+  apiKey: process.env.DEEPSEEK_API_KEY
 });
 
 // 作文评分接口
@@ -24,7 +24,11 @@ app.post("/score", async (req, res) => {
   const essay = req.body.essay;
 
   if (!essay || essay.trim().length < 20) {
-    return res.send("作文内容过短，请输入更完整的英文作文。");
+    return res.status(400).send("作文内容过短，请输入更完整的英文作文。");
+  }
+
+  if (!process.env.DEEPSEEK_API_KEY) {
+    return res.status(500).send("服务器未配置 DEEPSEEK_API_KEY。");
   }
 
   try {
@@ -97,7 +101,12 @@ ${essay}
   }
 });
 
+// 首页路由（保险写法）
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 // 启动服务器
 app.listen(port, () => {
-  console.log("Server running on http://localhost:" + port);
+  console.log("Server running on port " + port);
 });
