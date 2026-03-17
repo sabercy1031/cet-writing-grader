@@ -47,6 +47,7 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      transition: background 0.2s ease;
     }
 
     button:hover {
@@ -120,7 +121,7 @@
     </div>
   </div>
 
-  <button id="scrollToBottomBtn">回到底部</button>
+  <button id="scrollToBottomBtn">查看最新评分结果</button>
 
   <script>
     const textarea = document.getElementById("essay");
@@ -132,21 +133,32 @@
     let autoFollow = true;
     let isStreaming = false;
 
-    function pageNearBottom() {
-      return window.innerHeight + window.scrollY >= document.body.offsetHeight - 80;
+    function getPageHeight() {
+      return Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight
+      );
     }
 
-    function scrollPageToBottom(force = false) {
+    function pageNearBottom() {
+      return window.innerHeight + window.scrollY >= getPageHeight() - 80;
+    }
+
+    function hasResultContent() {
+      return result.innerText.trim().length > 0 || result.innerHTML.trim().length > 0;
+    }
+
+    function scrollPageToBottom(force = false, smooth = false) {
       if (force || autoFollow) {
         window.scrollTo({
-          top: document.body.scrollHeight,
-          behavior: "smooth"
+          top: getPageHeight(),
+          behavior: smooth ? "smooth" : "auto"
         });
       }
     }
 
     function updateScrollButton() {
-      if (isStreaming && !autoFollow) {
+      if (!pageNearBottom() && hasResultContent()) {
         scrollToBottomBtn.style.display = "block";
       } else {
         scrollToBottomBtn.style.display = "none";
@@ -158,8 +170,6 @@
     });
 
     window.addEventListener("scroll", () => {
-      if (!isStreaming) return;
-
       if (pageNearBottom()) {
         autoFollow = true;
       } else {
@@ -171,7 +181,7 @@
 
     scrollToBottomBtn.addEventListener("click", () => {
       autoFollow = true;
-      scrollPageToBottom(true);
+      scrollPageToBottom(true, true);
       updateScrollButton();
     });
 
@@ -191,6 +201,8 @@
       isStreaming = true;
       updateScrollButton();
 
+      scrollPageToBottom(true, false);
+
       try {
         const response = await fetch("/score", {
           method: "POST",
@@ -204,7 +216,17 @@
           const errText = await response.text();
           result.innerText = errText || "请求失败，请检查服务器";
           isStreaming = false;
-          autoFollow = true;
+          autoFollow = pageNearBottom();
+          updateScrollButton();
+          button.disabled = false;
+          button.innerText = "重新评分";
+          return;
+        }
+
+        if (!response.body) {
+          result.innerText = "请求失败，服务器未返回可读取内容";
+          isStreaming = false;
+          autoFollow = pageNearBottom();
           updateScrollButton();
           button.disabled = false;
           button.innerText = "重新评分";
@@ -212,7 +234,7 @@
         }
 
         result.innerText = "";
-        scrollPageToBottom(true);
+        scrollPageToBottom(true, false);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
@@ -223,7 +245,8 @@
 
           const text = decoder.decode(value, { stream: true });
           result.innerText += text;
-          scrollPageToBottom();
+
+          scrollPageToBottom(false, false);
           updateScrollButton();
         }
       } catch (e) {
@@ -231,8 +254,7 @@
       }
 
       isStreaming = false;
-      autoFollow = true;
-      scrollPageToBottom(true);
+      autoFollow = pageNearBottom();
       updateScrollButton();
 
       button.disabled = false;
