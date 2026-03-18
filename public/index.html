@@ -104,14 +104,22 @@
       flex-wrap: wrap;
     }
 
+    .counter-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
     .counter {
       font-size: 14px;
-      color: #6b7280;
+      color: #4b5563;
+      font-weight: 600;
     }
 
     .hint {
       font-size: 13px;
       color: #9ca3af;
+      line-height: 1.6;
     }
 
     .primary-btn {
@@ -166,6 +174,31 @@
       gap: 18px;
     }
 
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .secondary-btn {
+      border: 1px solid #dbe2f0;
+      background: #ffffff;
+      color: #3157d5;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+      transition: all 0.2s ease;
+    }
+
+    .secondary-btn:hover {
+      background: #f7faff;
+      border-color: #c9d6ff;
+    }
+
     .score-card {
       position: relative;
       overflow: hidden;
@@ -191,8 +224,9 @@
       position: relative;
       z-index: 1;
       font-size: 14px;
-      opacity: 0.9;
+      opacity: 0.92;
       margin-bottom: 12px;
+      font-weight: 600;
     }
 
     .score-value {
@@ -201,8 +235,29 @@
       font-size: 46px;
       font-weight: 800;
       line-height: 1;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       letter-spacing: -1px;
+    }
+
+    .score-meta {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      backdrop-filter: blur(4px);
     }
 
     .score-desc {
@@ -210,7 +265,7 @@
       z-index: 1;
       font-size: 15px;
       line-height: 1.7;
-      color: rgba(255, 255, 255, 0.92);
+      color: rgba(255, 255, 255, 0.94);
     }
 
     .grid-two {
@@ -230,8 +285,15 @@
     .card-header {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      gap: 12px;
       margin-bottom: 14px;
+    }
+
+    .card-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .card-icon {
@@ -305,7 +367,9 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 6px;
+      margin-top: 14px;
+      position: relative;
+      z-index: 1;
     }
 
     .tip-chip {
@@ -315,9 +379,47 @@
       padding: 8px 12px;
       border-radius: 999px;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    .essay-preview {
+      position: relative;
+      overflow: hidden;
+      max-height: none;
+      transition: max-height 0.3s ease;
+    }
+
+    .essay-preview.collapsed {
+      max-height: 230px;
+    }
+
+    .essay-preview.collapsed::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 80px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+      pointer-events: none;
+    }
+
+    .toggle-btn {
+      border: none;
       background: #f3f6ff;
       color: #3157d5;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .toggle-btn:hover {
+      background: #e8efff;
     }
 
     #scrollToBottomBtn {
@@ -339,6 +441,28 @@
 
     #scrollToBottomBtn:hover {
       filter: brightness(0.96);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      background: rgba(17, 24, 39, 0.92);
+      color: #fff;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 1001;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
     }
 
     @media (max-width: 760px) {
@@ -373,6 +497,10 @@
         right: 14px;
         bottom: 14px;
       }
+
+      .top-actions {
+        justify-content: stretch;
+      }
     }
   </style>
 </head>
@@ -392,9 +520,9 @@
       <textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
 
       <div class="editor-footer">
-        <div>
-          <div class="counter" id="counter">0 字</div>
-          <div class="hint">建议输入较完整的作文内容，批改结果会更稳定。</div>
+        <div class="counter-wrap">
+          <div class="counter" id="counter">当前词数：0</div>
+          <div class="hint">建议词数：四级 120–180 词 / 六级 150–220 词。输入越完整，批改结果通常越稳定。</div>
         </div>
       </div>
 
@@ -407,6 +535,7 @@
   </div>
 
   <button id="scrollToBottomBtn">查看最新评分结果</button>
+  <div id="toast" class="toast"></div>
 
   <script>
     const textarea = document.getElementById("essay");
@@ -414,10 +543,12 @@
     const button = document.getElementById("btn");
     const counter = document.getElementById("counter");
     const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
+    const toast = document.getElementById("toast");
 
     let autoFollow = true;
     let isStreaming = false;
     let rawResultText = "";
+    let isEssayExpanded = false;
 
     function getPageHeight() {
       return Math.max(
@@ -451,6 +582,21 @@
       }
     }
 
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 1800);
+    }
+
+    function countWords(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return 0;
+      return trimmed.split(/\s+/).filter(Boolean).length;
+    }
+
     function escapeHtml(str) {
       return String(str)
         .replace(/&/g, "&amp;")
@@ -464,7 +610,7 @@
       const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const nextPattern = nextTitles.length
         ? nextTitles.map(item => item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")
-        : "$";
+        : "";
 
       const regex = new RegExp(
         `【${escapedTitle}】([\\s\\S]*?)(?=${nextPattern ? `【(?:${nextPattern})】` : "$"}|$)`
@@ -498,6 +644,25 @@
         .filter(Boolean);
     }
 
+    function getLevelInfo(score) {
+      if (score >= 13) {
+        return { level: "优秀水平", surpass: 90 };
+      }
+      if (score >= 11) {
+        return { level: "良好水平", surpass: 75 };
+      }
+      if (score >= 9) {
+        return { level: "中上水平", surpass: 60 };
+      }
+      if (score >= 7) {
+        return { level: "中等水平", surpass: 45 };
+      }
+      if (score >= 5) {
+        return { level: "基础水平", surpass: 30 };
+      }
+      return { level: "仍需提升", surpass: 15 };
+    }
+
     function parseStructuredResult(text) {
       const cleanText = text.replace(/\r/g, "").trim();
 
@@ -509,10 +674,15 @@
       const highScoreEssayText = extractSection(cleanText, "高分范文", []);
 
       const scoreMatch = scoreText.match(/(\d+(?:\.\d+)?)\s*\/\s*15/);
+      const scoreNumber = scoreMatch ? Number(scoreMatch[1]) : null;
+      const levelInfo = scoreNumber !== null ? getLevelInfo(scoreNumber) : null;
 
       return {
         scoreRaw: scoreText || "",
         scoreValue: scoreMatch ? scoreMatch[1] : "",
+        scoreNumber,
+        level: levelInfo ? levelInfo.level : "",
+        surpass: levelInfo ? levelInfo.surpass : "",
         advantages: sectionToList(advantagesText),
         problems: sectionToList(problemsText),
         suggestions: sectionToList(suggestionsText),
@@ -528,15 +698,21 @@
     function renderFallback(rawText) {
       result.innerHTML = `
         <div class="result-layout">
+          <div class="top-actions">
+            <button class="secondary-btn" id="copyResultBtn">复制批改结果</button>
+          </div>
           <div class="card fallback">
             <div class="card-header">
-              <div class="card-icon">📄</div>
-              <h3 class="card-title">批改结果</h3>
+              <div class="card-header-left">
+                <div class="card-icon">📄</div>
+                <h3 class="card-title">批改结果</h3>
+              </div>
             </div>
             <pre class="essay-text">${escapeHtml(rawText)}</pre>
           </div>
         </div>
       `;
+      bindCopyButton(rawText);
     }
 
     function renderStructuredResult(rawText) {
@@ -560,15 +736,34 @@
         : escapeHtml(parsed.scoreRaw || "未识别");
 
       const scoreDesc = parsed.scoreValue
-        ? "这是 AI 结合四六级评分标准给出的预测分数，可作为你本次作文水平的直观参考。"
+        ? "这是 AI 结合四六级评分标准给出的预测分数，可作为你本次作文水平的直观参考。超越百分比为体验化估算值，用于增强反馈感。"
         : "本次结果未能完整解析出分数字段，但原始批改内容仍已保留。";
+
+      const essayIsLong = parsed.highScoreEssay && parsed.highScoreEssay.length > 320;
 
       result.innerHTML = `
         <div class="result-layout">
+          <div class="top-actions">
+            <button class="secondary-btn" id="copyResultBtn">复制批改结果</button>
+          </div>
+
           <div class="score-card">
             <div class="score-label">🎯 预测分数</div>
             <div class="score-value">${scoreDisplay}</div>
+
+            ${
+              parsed.scoreValue
+                ? `
+                  <div class="score-meta">
+                    <span class="score-pill">评价等级：${escapeHtml(parsed.level)}</span>
+                    <span class="score-pill">估算超越：${escapeHtml(String(parsed.surpass))}% 的考生</span>
+                  </div>
+                `
+                : ""
+            }
+
             <div class="score-desc">${scoreDesc}</div>
+
             <div class="tips-bar">
               <span class="tip-chip">结构化批改</span>
               <span class="tip-chip">参考修改句</span>
@@ -579,8 +774,10 @@
           <div class="grid-two">
             <div class="card good">
               <div class="card-header">
-                <div class="card-icon">✅</div>
-                <h3 class="card-title">优点</h3>
+                <div class="card-header-left">
+                  <div class="card-icon">✅</div>
+                  <h3 class="card-title">优点</h3>
+                </div>
               </div>
               ${
                 parsed.advantages.length
@@ -591,8 +788,10 @@
 
             <div class="card bad">
               <div class="card-header">
-                <div class="card-icon">❌</div>
-                <h3 class="card-title">问题</h3>
+                <div class="card-header-left">
+                  <div class="card-icon">❌</div>
+                  <h3 class="card-title">问题</h3>
+                </div>
               </div>
               ${
                 parsed.problems.length
@@ -604,8 +803,10 @@
 
           <div class="card suggest">
             <div class="card-header">
-              <div class="card-icon">💡</div>
-              <h3 class="card-title">修改建议</h3>
+              <div class="card-header-left">
+                <div class="card-icon">💡</div>
+                <h3 class="card-title">修改建议</h3>
+              </div>
             </div>
             ${
               parsed.suggestions.length
@@ -616,8 +817,10 @@
 
           <div class="card sentence">
             <div class="card-header">
-              <div class="card-icon">✏️</div>
-              <h3 class="card-title">参考修改句</h3>
+              <div class="card-header-left">
+                <div class="card-icon">✏️</div>
+                <h3 class="card-title">参考修改句</h3>
+              </div>
             </div>
             ${
               parsed.revisedSentences.length
@@ -628,21 +831,69 @@
 
           <div class="card essay-card">
             <div class="card-header">
-              <div class="card-icon">📘</div>
-              <h3 class="card-title">高分范文</h3>
+              <div class="card-header-left">
+                <div class="card-icon">📘</div>
+                <h3 class="card-title">高分范文</h3>
+              </div>
+              ${
+                essayIsLong
+                  ? `<button class="toggle-btn" id="toggleEssayBtn">${isEssayExpanded ? "收起范文" : "展开全文"}</button>`
+                  : ""
+              }
             </div>
             ${
               parsed.highScoreEssay
-                ? `<p class="essay-text">${escapeHtml(parsed.highScoreEssay)}</p>`
+                ? `
+                  <div class="essay-preview ${essayIsLong && !isEssayExpanded ? "collapsed" : ""}" id="essayPreview">
+                    <p class="essay-text">${escapeHtml(parsed.highScoreEssay)}</p>
+                  </div>
+                `
                 : `<p class="essay-text">本次未解析到高分范文。</p>`
             }
           </div>
         </div>
       `;
+
+      bindCopyButton(rawText);
+      bindEssayToggle(essayIsLong);
+    }
+
+    function bindCopyButton(rawText) {
+      const copyBtn = document.getElementById("copyResultBtn");
+      if (!copyBtn) return;
+
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(rawText);
+          showToast("批改结果已复制");
+        } catch (error) {
+          showToast("复制失败，请稍后重试");
+        }
+      });
+    }
+
+    function bindEssayToggle(canToggle) {
+      if (!canToggle) return;
+
+      const toggleEssayBtn = document.getElementById("toggleEssayBtn");
+      const essayPreview = document.getElementById("essayPreview");
+      if (!toggleEssayBtn || !essayPreview) return;
+
+      toggleEssayBtn.addEventListener("click", () => {
+        isEssayExpanded = !isEssayExpanded;
+        if (isEssayExpanded) {
+          essayPreview.classList.remove("collapsed");
+          toggleEssayBtn.textContent = "收起范文";
+        } else {
+          essayPreview.classList.add("collapsed");
+          toggleEssayBtn.textContent = "展开全文";
+        }
+      });
     }
 
     textarea.addEventListener("input", () => {
-      counter.innerText = textarea.value.length + " 字";
+      const wordCount = countWords(textarea.value);
+      counter.innerText = `当前词数：${wordCount}`;
     });
 
     window.addEventListener("scroll", () => {
@@ -658,15 +909,17 @@
 
     button.onclick = async () => {
       const essay = textarea.value.trim();
+      const wordCount = countWords(essay);
 
-      if (essay.length < 20) {
-        alert("作文太短了");
+      if (wordCount < 30) {
+        alert("作文词数过少，请至少输入 30 个词后再评分。");
         return;
       }
 
       button.disabled = true;
       button.innerText = "AI评分中...";
       rawResultText = "";
+      isEssayExpanded = false;
       result.innerHTML = `<div class="raw-stream-box"><span class="loading">AI正在评分，请稍等...</span></div>`;
 
       autoFollow = true;
