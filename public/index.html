@@ -9,6 +9,10 @@
       box-sizing: border-box;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
       padding: 32px 18px 80px;
@@ -52,10 +56,47 @@
     }
 
     .subtitle {
-      margin: 0;
+      margin: 0 0 16px;
       font-size: 15px;
       line-height: 1.7;
       color: #6b7280;
+    }
+
+    .jump-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .jump-chip {
+      border: 1px solid #d9e3ff;
+      background: #eef3ff;
+      color: #3157d5;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .jump-chip:hover {
+      background: #dfe8ff;
+      border-color: #c8d8ff;
+      transform: translateY(-1px);
+    }
+
+    .jump-chip.in-card {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      backdrop-filter: blur(4px);
+    }
+
+    .jump-chip.in-card:hover {
+      background: rgba(255, 255, 255, 0.24);
+      border-color: rgba(255, 255, 255, 0.24);
     }
 
     .editor-card {
@@ -266,6 +307,16 @@
       font-size: 15px;
       line-height: 1.7;
       color: rgba(255, 255, 255, 0.94);
+      margin-bottom: 14px;
+    }
+
+    .card-nav {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
     }
 
     .grid-two {
@@ -280,6 +331,7 @@
       border-radius: 20px;
       padding: 22px 20px;
       box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+      scroll-margin-top: 20px;
     }
 
     .card-header {
@@ -344,6 +396,11 @@
       color: #4b5563;
     }
 
+    .score-section .card-icon {
+      background: #eff6ff;
+      color: #3157d5;
+    }
+
     .list {
       margin: 0;
       padding-left: 22px;
@@ -361,27 +418,6 @@
       line-height: 2;
       color: #374151;
       word-break: break-word;
-    }
-
-    .tips-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .tip-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-      background: rgba(255, 255, 255, 0.16);
-      color: #fff;
     }
 
     .essay-preview {
@@ -501,6 +537,11 @@
       .top-actions {
         justify-content: stretch;
       }
+
+      .jump-nav,
+      .card-nav {
+        gap: 8px;
+      }
     }
   </style>
 </head>
@@ -512,6 +553,15 @@
       <p class="subtitle">
         输入你的英文作文，系统将从预测分数、优点、问题、修改建议、参考修改句与高分范文六个维度给出详细反馈。
       </p>
+
+      <div class="jump-nav" id="topJumpNav">
+        <button class="jump-chip" data-target="scoreSection">预测分数</button>
+        <button class="jump-chip" data-target="advantagesSection">优点</button>
+        <button class="jump-chip" data-target="problemsSection">问题</button>
+        <button class="jump-chip" data-target="suggestionsSection">修改建议</button>
+        <button class="jump-chip" data-target="sentencesSection">参考修改句</button>
+        <button class="jump-chip" data-target="essaySection">高分范文</button>
+      </div>
     </div>
 
     <div class="editor-card">
@@ -549,6 +599,7 @@
     let isStreaming = false;
     let rawResultText = "";
     let isEssayExpanded = false;
+    let sectionCopyMap = {};
 
     function getPageHeight() {
       return Math.max(
@@ -695,11 +746,71 @@
       return items.map(item => `<li>${escapeHtml(item)}</li>`).join("");
     }
 
+    function listToText(title, items) {
+      if (!items || !items.length) return `${title}\n暂无内容`;
+      return `${title}\n` + items.map((item, index) => `${index + 1}. ${item}`).join("\n");
+    }
+
+    function setupSectionCopyMap(parsed, rawText) {
+      const scoreText = parsed.scoreValue
+        ? `预测分数\n${parsed.scoreValue} / 15\n评价等级：${parsed.level}\n估算超越：${parsed.surpass}% 的考生`
+        : `预测分数\n${parsed.scoreRaw || "未识别"}`;
+
+      sectionCopyMap = {
+        copyFull: rawText,
+        copyScore: scoreText,
+        copyAdvantages: listToText("优点", parsed.advantages),
+        copyProblems: listToText("问题", parsed.problems),
+        copySuggestions: listToText("修改建议", parsed.suggestions),
+        copySentences: listToText("参考修改句", parsed.revisedSentences),
+        copyEssay: parsed.highScoreEssay ? `高分范文\n${parsed.highScoreEssay}` : "高分范文\n暂无内容"
+      };
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("复制成功");
+      } catch (error) {
+        showToast("复制失败，请稍后重试");
+      }
+    }
+
+    function jumpToSection(targetId) {
+      const el = document.getElementById(targetId);
+      if (!el) {
+        showToast("请先生成评分结果");
+        return;
+      }
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function bindJumpButtons() {
+      document.querySelectorAll("[data-target]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          jumpToSection(btn.dataset.target);
+        });
+      });
+    }
+
+    function bindCopyButtons() {
+      document.querySelectorAll("[data-copy-key]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.copyKey;
+          copyText(sectionCopyMap[key] || "");
+        });
+      });
+    }
+
     function renderFallback(rawText) {
+      sectionCopyMap = {
+        copyFull: rawText
+      };
+
       result.innerHTML = `
         <div class="result-layout">
           <div class="top-actions">
-            <button class="secondary-btn" id="copyResultBtn">复制批改结果</button>
+            <button class="secondary-btn" data-copy-key="copyFull">复制批改结果</button>
           </div>
           <div class="card fallback">
             <div class="card-header">
@@ -712,7 +823,7 @@
           </div>
         </div>
       `;
-      bindCopyButton(rawText);
+      bindCopyButtons();
     }
 
     function renderStructuredResult(rawText) {
@@ -731,6 +842,8 @@
         return;
       }
 
+      setupSectionCopyMap(parsed, rawText);
+
       const scoreDisplay = parsed.scoreValue
         ? `${escapeHtml(parsed.scoreValue)} / 15`
         : escapeHtml(parsed.scoreRaw || "未识别");
@@ -744,11 +857,18 @@
       result.innerHTML = `
         <div class="result-layout">
           <div class="top-actions">
-            <button class="secondary-btn" id="copyResultBtn">复制批改结果</button>
+            <button class="secondary-btn" data-copy-key="copyFull">复制全部批改结果</button>
           </div>
 
-          <div class="score-card">
-            <div class="score-label">🎯 预测分数</div>
+          <div class="score-card card score-section" id="scoreSection">
+            <div class="card-header">
+              <div class="card-header-left">
+                <div class="card-icon">🎯</div>
+                <h3 class="card-title" style="color:#fff;">预测分数</h3>
+              </div>
+              <button class="secondary-btn" data-copy-key="copyScore">复制本区</button>
+            </div>
+
             <div class="score-value">${scoreDisplay}</div>
 
             ${
@@ -764,20 +884,24 @@
 
             <div class="score-desc">${scoreDesc}</div>
 
-            <div class="tips-bar">
-              <span class="tip-chip">结构化批改</span>
-              <span class="tip-chip">参考修改句</span>
-              <span class="tip-chip">高分范文</span>
+            <div class="card-nav">
+              <button class="jump-chip in-card" data-target="scoreSection">预测分数</button>
+              <button class="jump-chip in-card" data-target="advantagesSection">优点</button>
+              <button class="jump-chip in-card" data-target="problemsSection">问题</button>
+              <button class="jump-chip in-card" data-target="suggestionsSection">修改建议</button>
+              <button class="jump-chip in-card" data-target="sentencesSection">参考修改句</button>
+              <button class="jump-chip in-card" data-target="essaySection">高分范文</button>
             </div>
           </div>
 
           <div class="grid-two">
-            <div class="card good">
+            <div class="card good" id="advantagesSection">
               <div class="card-header">
                 <div class="card-header-left">
                   <div class="card-icon">✅</div>
                   <h3 class="card-title">优点</h3>
                 </div>
+                <button class="secondary-btn" data-copy-key="copyAdvantages">复制本区</button>
               </div>
               ${
                 parsed.advantages.length
@@ -786,12 +910,13 @@
               }
             </div>
 
-            <div class="card bad">
+            <div class="card bad" id="problemsSection">
               <div class="card-header">
                 <div class="card-header-left">
                   <div class="card-icon">❌</div>
                   <h3 class="card-title">问题</h3>
                 </div>
+                <button class="secondary-btn" data-copy-key="copyProblems">复制本区</button>
               </div>
               ${
                 parsed.problems.length
@@ -801,12 +926,13 @@
             </div>
           </div>
 
-          <div class="card suggest">
+          <div class="card suggest" id="suggestionsSection">
             <div class="card-header">
               <div class="card-header-left">
                 <div class="card-icon">💡</div>
                 <h3 class="card-title">修改建议</h3>
               </div>
+              <button class="secondary-btn" data-copy-key="copySuggestions">复制本区</button>
             </div>
             ${
               parsed.suggestions.length
@@ -815,12 +941,13 @@
             }
           </div>
 
-          <div class="card sentence">
+          <div class="card sentence" id="sentencesSection">
             <div class="card-header">
               <div class="card-header-left">
                 <div class="card-icon">✏️</div>
                 <h3 class="card-title">参考修改句</h3>
               </div>
+              <button class="secondary-btn" data-copy-key="copySentences">复制本区</button>
             </div>
             ${
               parsed.revisedSentences.length
@@ -829,17 +956,20 @@
             }
           </div>
 
-          <div class="card essay-card">
+          <div class="card essay-card" id="essaySection">
             <div class="card-header">
               <div class="card-header-left">
                 <div class="card-icon">📘</div>
                 <h3 class="card-title">高分范文</h3>
               </div>
-              ${
-                essayIsLong
-                  ? `<button class="toggle-btn" id="toggleEssayBtn">${isEssayExpanded ? "收起范文" : "展开全文"}</button>`
-                  : ""
-              }
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="secondary-btn" data-copy-key="copyEssay">复制本区</button>
+                ${
+                  essayIsLong
+                    ? `<button class="toggle-btn" id="toggleEssayBtn">${isEssayExpanded ? "收起范文" : "展开全文"}</button>`
+                    : ""
+                }
+              </div>
             </div>
             ${
               parsed.highScoreEssay
@@ -854,22 +984,9 @@
         </div>
       `;
 
-      bindCopyButton(rawText);
+      bindJumpButtons();
+      bindCopyButtons();
       bindEssayToggle(essayIsLong);
-    }
-
-    function bindCopyButton(rawText) {
-      const copyBtn = document.getElementById("copyResultBtn");
-      if (!copyBtn) return;
-
-      copyBtn.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(rawText);
-          showToast("批改结果已复制");
-        } catch (error) {
-          showToast("复制失败，请稍后重试");
-        }
-      });
     }
 
     function bindEssayToggle(canToggle) {
@@ -907,6 +1024,8 @@
       updateScrollButton();
     });
 
+    bindJumpButtons();
+
     button.onclick = async () => {
       const essay = textarea.value.trim();
       const wordCount = countWords(essay);
@@ -920,6 +1039,7 @@
       button.innerText = "AI评分中...";
       rawResultText = "";
       isEssayExpanded = false;
+      sectionCopyMap = {};
       result.innerHTML = `<div class="raw-stream-box"><span class="loading">AI正在评分，请稍等...</span></div>`;
 
       autoFollow = true;
