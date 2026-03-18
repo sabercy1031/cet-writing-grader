@@ -17,8 +17,7 @@
       margin: 0;
       padding: 32px 18px 80px;
       font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-      background:
-        radial-gradient(circle at top, #eef4ff 0%, #f7f9fc 35%, #f5f6fa 100%);
+      background: radial-gradient(circle at top, #eef4ff 0%, #f7f9fc 35%, #f5f6fa 100%);
       color: #1f2937;
     }
 
@@ -62,41 +61,41 @@
       color: #6b7280;
     }
 
-    .jump-nav {
+    .feature-nav {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
 
-    .jump-chip {
+    .feature-chip {
       border: 1px solid #d9e3ff;
       background: #eef3ff;
       color: #3157d5;
-      padding: 9px 14px;
+      padding: 10px 16px;
       border-radius: 999px;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.18s ease;
     }
 
-    .jump-chip:hover {
+    .feature-chip:hover {
       background: #dfe8ff;
       border-color: #c8d8ff;
       transform: translateY(-1px);
     }
 
-    .jump-chip.in-card {
+    .feature-chip.card-chip {
       background: rgba(255, 255, 255, 0.16);
-      border-color: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.22);
       color: #fff;
       backdrop-filter: blur(4px);
     }
 
-    .jump-chip.in-card:hover {
+    .feature-chip.card-chip:hover {
       background: rgba(255, 255, 255, 0.24);
-      border-color: rgba(255, 255, 255, 0.24);
+      border-color: rgba(255, 255, 255, 0.28);
     }
 
     .editor-card {
@@ -248,6 +247,8 @@
       color: #fff;
       padding: 26px 24px;
       box-shadow: 0 18px 36px rgba(49, 87, 213, 0.22);
+      border: none;
+      scroll-margin-top: 20px;
     }
 
     .score-card::after {
@@ -259,6 +260,18 @@
       height: 140px;
       background: rgba(255, 255, 255, 0.12);
       border-radius: 50%;
+    }
+
+    .score-card .secondary-btn {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.22);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .score-card .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.24);
+      border-color: rgba(255, 255, 255, 0.28);
     }
 
     .score-label {
@@ -278,6 +291,7 @@
       line-height: 1;
       margin-bottom: 12px;
       letter-spacing: -1px;
+      color: #fff;
     }
 
     .score-meta {
@@ -394,11 +408,6 @@
     .fallback .card-icon {
       background: #f3f4f6;
       color: #4b5563;
-    }
-
-    .score-section .card-icon {
-      background: #eff6ff;
-      color: #3157d5;
     }
 
     .list {
@@ -533,15 +542,6 @@
         right: 14px;
         bottom: 14px;
       }
-
-      .top-actions {
-        justify-content: stretch;
-      }
-
-      .jump-nav,
-      .card-nav {
-        gap: 8px;
-      }
     }
   </style>
 </head>
@@ -550,17 +550,15 @@
     <div class="hero">
       <div class="hero-badge">AI 写作批改 · 四六级作文</div>
       <h1>AI 四六级作文评分</h1>
-      <p class="subtitle">
-        输入你的英文作文，系统将从预测分数、优点、问题、修改建议、参考修改句与高分范文六个维度给出详细反馈。
-      </p>
+      <p class="subtitle">输入你的英文作文，获取 AI 的结构化评分、修改建议与高分改写。</p>
 
-      <div class="jump-nav" id="topJumpNav">
-        <button class="jump-chip" data-target="scoreSection">预测分数</button>
-        <button class="jump-chip" data-target="advantagesSection">优点</button>
-        <button class="jump-chip" data-target="problemsSection">问题</button>
-        <button class="jump-chip" data-target="suggestionsSection">修改建议</button>
-        <button class="jump-chip" data-target="sentencesSection">参考修改句</button>
-        <button class="jump-chip" data-target="essaySection">高分范文</button>
+      <div class="feature-nav">
+        <button class="feature-chip" data-target="scoreSection">预测分数</button>
+        <button class="feature-chip" data-target="advantagesSection">优点</button>
+        <button class="feature-chip" data-target="problemsSection">问题</button>
+        <button class="feature-chip" data-target="suggestionsSection">修改建议</button>
+        <button class="feature-chip" data-target="sentencesSection">参考修改句</button>
+        <button class="feature-chip" data-target="essaySection">高分范文</button>
       </div>
     </div>
 
@@ -600,6 +598,7 @@
     let rawResultText = "";
     let isEssayExpanded = false;
     let sectionCopyMap = {};
+    let hasStructuredResult = false;
 
     function getPageHeight() {
       return Math.max(
@@ -696,21 +695,11 @@
     }
 
     function getLevelInfo(score) {
-      if (score >= 13) {
-        return { level: "优秀水平", surpass: 90 };
-      }
-      if (score >= 11) {
-        return { level: "良好水平", surpass: 75 };
-      }
-      if (score >= 9) {
-        return { level: "中上水平", surpass: 60 };
-      }
-      if (score >= 7) {
-        return { level: "中等水平", surpass: 45 };
-      }
-      if (score >= 5) {
-        return { level: "基础水平", surpass: 30 };
-      }
+      if (score >= 13) return { level: "优秀水平", surpass: 90 };
+      if (score >= 11) return { level: "良好水平", surpass: 75 };
+      if (score >= 9) return { level: "中上水平", surpass: 60 };
+      if (score >= 7) return { level: "中等水平", surpass: 45 };
+      if (score >= 5) return { level: "基础水平", surpass: 30 };
       return { level: "仍需提升", surpass: 15 };
     }
 
@@ -777,40 +766,53 @@
     }
 
     function jumpToSection(targetId) {
+      if (!hasStructuredResult) return;
       const el = document.getElementById(targetId);
-      if (!el) {
-        showToast("请先生成评分结果");
-        return;
-      }
+      if (!el) return;
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function bindJumpButtons() {
       document.querySelectorAll("[data-target]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          jumpToSection(btn.dataset.target);
-        });
+        btn.onclick = () => jumpToSection(btn.dataset.target);
       });
     }
 
     function bindCopyButtons() {
       document.querySelectorAll("[data-copy-key]").forEach(btn => {
-        btn.addEventListener("click", () => {
+        btn.onclick = () => {
           const key = btn.dataset.copyKey;
           copyText(sectionCopyMap[key] || "");
-        });
+        };
       });
     }
 
-    function renderFallback(rawText) {
-      sectionCopyMap = {
-        copyFull: rawText
+    function bindEssayToggle(canToggle) {
+      if (!canToggle) return;
+      const toggleEssayBtn = document.getElementById("toggleEssayBtn");
+      const essayPreview = document.getElementById("essayPreview");
+      if (!toggleEssayBtn || !essayPreview) return;
+
+      toggleEssayBtn.onclick = () => {
+        isEssayExpanded = !isEssayExpanded;
+        if (isEssayExpanded) {
+          essayPreview.classList.remove("collapsed");
+          toggleEssayBtn.textContent = "收起范文";
+        } else {
+          essayPreview.classList.add("collapsed");
+          toggleEssayBtn.textContent = "展开全文";
+        }
       };
+    }
+
+    function renderFallback(rawText) {
+      hasStructuredResult = false;
+      sectionCopyMap = { copyFull: rawText };
 
       result.innerHTML = `
         <div class="result-layout">
           <div class="top-actions">
-            <button class="secondary-btn" data-copy-key="copyFull">复制批改结果</button>
+            <button class="secondary-btn" data-copy-key="copyFull">复制全部批改结果</button>
           </div>
           <div class="card fallback">
             <div class="card-header">
@@ -829,7 +831,7 @@
     function renderStructuredResult(rawText) {
       const parsed = parseStructuredResult(rawText);
 
-      const hasStructuredContent =
+      const ok =
         parsed.scoreRaw ||
         parsed.advantages.length ||
         parsed.problems.length ||
@@ -837,11 +839,12 @@
         parsed.revisedSentences.length ||
         parsed.highScoreEssay;
 
-      if (!hasStructuredContent) {
+      if (!ok) {
         renderFallback(rawText);
         return;
       }
 
+      hasStructuredResult = true;
       setupSectionCopyMap(parsed, rawText);
 
       const scoreDisplay = parsed.scoreValue
@@ -860,10 +863,10 @@
             <button class="secondary-btn" data-copy-key="copyFull">复制全部批改结果</button>
           </div>
 
-          <div class="score-card card score-section" id="scoreSection">
+          <div class="score-card" id="scoreSection">
             <div class="card-header">
               <div class="card-header-left">
-                <div class="card-icon">🎯</div>
+                <div class="card-icon" style="background: rgba(255,255,255,0.16); color: #fff;">🎯</div>
                 <h3 class="card-title" style="color:#fff;">预测分数</h3>
               </div>
               <button class="secondary-btn" data-copy-key="copyScore">复制本区</button>
@@ -885,12 +888,12 @@
             <div class="score-desc">${scoreDesc}</div>
 
             <div class="card-nav">
-              <button class="jump-chip in-card" data-target="scoreSection">预测分数</button>
-              <button class="jump-chip in-card" data-target="advantagesSection">优点</button>
-              <button class="jump-chip in-card" data-target="problemsSection">问题</button>
-              <button class="jump-chip in-card" data-target="suggestionsSection">修改建议</button>
-              <button class="jump-chip in-card" data-target="sentencesSection">参考修改句</button>
-              <button class="jump-chip in-card" data-target="essaySection">高分范文</button>
+              <button class="feature-chip card-chip" data-target="scoreSection">预测分数</button>
+              <button class="feature-chip card-chip" data-target="advantagesSection">优点</button>
+              <button class="feature-chip card-chip" data-target="problemsSection">问题</button>
+              <button class="feature-chip card-chip" data-target="suggestionsSection">修改建议</button>
+              <button class="feature-chip card-chip" data-target="sentencesSection">参考修改句</button>
+              <button class="feature-chip card-chip" data-target="essaySection">高分范文</button>
             </div>
           </div>
 
@@ -989,25 +992,6 @@
       bindEssayToggle(essayIsLong);
     }
 
-    function bindEssayToggle(canToggle) {
-      if (!canToggle) return;
-
-      const toggleEssayBtn = document.getElementById("toggleEssayBtn");
-      const essayPreview = document.getElementById("essayPreview");
-      if (!toggleEssayBtn || !essayPreview) return;
-
-      toggleEssayBtn.addEventListener("click", () => {
-        isEssayExpanded = !isEssayExpanded;
-        if (isEssayExpanded) {
-          essayPreview.classList.remove("collapsed");
-          toggleEssayBtn.textContent = "收起范文";
-        } else {
-          essayPreview.classList.add("collapsed");
-          toggleEssayBtn.textContent = "展开全文";
-        }
-      });
-    }
-
     textarea.addEventListener("input", () => {
       const wordCount = countWords(textarea.value);
       counter.innerText = `当前词数：${wordCount}`;
@@ -1039,6 +1023,7 @@
       button.innerText = "AI评分中...";
       rawResultText = "";
       isEssayExpanded = false;
+      hasStructuredResult = false;
       sectionCopyMap = {};
       result.innerHTML = `<div class="raw-stream-box"><span class="loading">AI正在评分，请稍等...</span></div>`;
 
