@@ -114,6 +114,34 @@
       color: #111827;
     }
 
+    .ocr-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .ocr-file {
+      max-width: 280px;
+      font-size: 14px;
+    }
+
+    .ocr-status {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 4px 0 12px;
+      line-height: 1.6;
+    }
+
+    .ocr-status.success {
+      color: #15803d;
+    }
+
+    .ocr-status.error {
+      color: #dc2626;
+    }
+
     textarea {
       width: 100%;
       min-height: 240px;
@@ -237,6 +265,11 @@
     .secondary-btn:hover {
       background: #f7faff;
       border-color: #c9d6ff;
+    }
+
+    .secondary-btn:disabled {
+      opacity: 0.72;
+      cursor: not-allowed;
     }
 
     .score-card {
@@ -538,6 +571,15 @@
         padding: 18px;
       }
 
+      .ocr-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .ocr-file {
+        max-width: 100%;
+      }
+
       #scrollToBottomBtn {
         right: 14px;
         bottom: 14px;
@@ -564,6 +606,15 @@
 
     <div class="editor-card">
       <h2 class="section-title">输入作文</h2>
+
+      <div class="ocr-toolbar">
+        <input id="imageUpload" class="ocr-file" type="file" accept="image/*" />
+        <button id="ocrBtn" class="secondary-btn" type="button">图片识别</button>
+      </div>
+
+      <div id="ocrStatus" class="ocr-status">
+        建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。
+      </div>
 
       <textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
 
@@ -592,6 +643,9 @@
     const counter = document.getElementById("counter");
     const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
     const toast = document.getElementById("toast");
+    const imageUpload = document.getElementById("imageUpload");
+    const ocrBtn = document.getElementById("ocrBtn");
+    const ocrStatus = document.getElementById("ocrStatus");
 
     let autoFollow = true;
     let isStreaming = false;
@@ -601,6 +655,7 @@
     let isEssayExpanded = false;
     let sectionCopyMap = {};
     let hasStructuredResult = false;
+    let isOcrLoading = false;
 
     function getPageHeight() {
       return Math.max(
@@ -647,6 +702,11 @@
       const trimmed = text.trim();
       if (!trimmed) return 0;
       return trimmed.split(/\s+/).filter(Boolean).length;
+    }
+
+    function updateWordCounter() {
+      const wordCount = countWords(textarea.value);
+      counter.innerText = `当前词数：${wordCount}`;
     }
 
     function escapeHtml(str) {
@@ -994,10 +1054,12 @@
       bindEssayToggle(essayIsLong);
     }
 
-    textarea.addEventListener("input", () => {
-      const wordCount = countWords(textarea.value);
-      counter.innerText = `当前词数：${wordCount}`;
-    });
+    function setOcrStatus(message, type = "") {
+      ocrStatus.textContent = message;
+      ocrStatus.className = `ocr-status${type ? " " + type : ""}`;
+    }
+
+    textarea.addEventListener("input", updateWordCounter);
 
     window.addEventListener("scroll", () => {
       autoFollow = pageNearBottom();
@@ -1010,10 +1072,81 @@
       updateScrollButton();
     });
 
+    ocrBtn.onclick = async () => {
+      if (isOcrLoading || isLoading) return;
+
+      const file = imageUpload.files[0];
+      if (!file) {
+        alert("请先选择图片");
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        alert("请选择图片文件");
+        return;
+      }
+
+      if (file.size > 8 * 1024 * 1024) {
+        alert("图片不能超过 8MB");
+        return;
+      }
+
+      isOcrLoading = true;
+      ocrBtn.disabled = true;
+      ocrBtn.textContent = "识别中...";
+
+      setOcrStatus("正在识别图片，请稍等...", "");
+
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const response = await fetch("/ocr", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "图片识别失败");
+        }
+
+        const recognizedText = (data.text || "").trim();
+
+        if (!recognizedText) {
+          setOcrStatus(data.warning || "未识别到清晰文字，请换一张更清晰的照片再试。", "error");
+          return;
+        }
+
+        if (textarea.value.trim()) {
+          const shouldAppend = confirm("文本框里已经有内容了。点击“确定”会把识别结果追加到现有内容后面；点击“取消”则不导入。");
+          if (!shouldAppend) {
+            setOcrStatus("已取消导入识别结果。", "");
+            return;
+          }
+          textarea.value = `${textarea.value.trim()}\n${recognizedText}`;
+        } else {
+          textarea.value = recognizedText;
+        }
+
+        updateWordCounter();
+        setOcrStatus("图片识别完成，请检查并修改识别结果后再评分。", "success");
+        showToast("识别成功");
+      } catch (error) {
+        setOcrStatus(error.message || "图片识别失败，请换一张更清晰的照片再试。", "error");
+      } finally {
+        isOcrLoading = false;
+        ocrBtn.disabled = false;
+        ocrBtn.textContent = "图片识别";
+      }
+    };
+
     bindJumpButtons();
+    updateWordCounter();
 
     button.onclick = async () => {
-      if (isLoading) return;
+      if (isLoading || isOcrLoading) return;
 
       const essay = textarea.value.trim();
       const wordCount = countWords(essay);
