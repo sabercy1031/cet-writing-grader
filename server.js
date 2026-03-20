@@ -3,6 +3,8 @@ const cors = require("cors");
 const OpenAI = require("openai");
 const path = require("path");
 const fs = require("fs");
+const axios = require("axios");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +20,18 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(publicDir));
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 8 * 1024 * 1024 // 8MB
+  }
+});
+
+let baiduTokenCache = {
+  token: "",
+  expiresAt: 0
+};
 
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -207,7 +221,7 @@ function buildPrompt(essay, wordCount) {
 四、关于线上输入噪声的特殊规则
 ====================
 
-这是线上工具，文本可能来自手打、复制粘贴，未来也可能来自图片识别（OCR）。
+这是线上工具，文本可能来自手打、复制粘贴，也可能来自图片识别（OCR）。
 
 请区分：
 
@@ -328,6 +342,95 @@ X / 15
 ${essay}
 `.trim();
 }
+
+async function getBaiduAccessToken() {
+  const now = Date.now();
+
+  if (baiduTokenCache.token && baiduTokenCache.expiresAt > now + 60 * 1000) {
+    return baiduTokenCache.token;
+  }
+
+  const apiKey = process.env.BAIDU_OCR_API_KEY;
+  const secretKey = process.env.BAIDU_OCR_SECRET_KEY;
+
+  if (!apiKey || !secretKey) {
+    throw new Error("服务器未配置百度OCR密钥");
+  }
+
+  const tokenRes = await axios.post(
+    "https://aip.baidubce.com/oauth/2.0/token",
+    null,
+    {
+      params: {
+        grant_type: "client_credentials",
+        client_id: apiKey,
+        client_secret: secretKey
+      },
+      timeout: 15000
+    }
+  );
+
+  const token = tokenRes.data?.access_token;
+  const expiresIn = Number(tokenRes.data?.expires_in || 0);
+
+  if (!token) {
+    throw new Error("获取百度OCR access_token失败");
+  }
+
+  baiduTokenCache = {
+    token,
+    expiresAt: now + expiresIn * 1000
+  };
+
+  return token;
+}
+
+app.post("/ocr", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "请先上传图片" });
+    }
+
+    const mime = req.file.mimetype || "";
+    if (!mime.startsWith("image/")) {
+      return res.status(400).json({ error: "只支持图片文件" });
+    }
+
+    const accessToken = await getBaiduAccessToken();
+    const imageBase64 = req.file.buffer.toString("base64");
+
+    const ocrRes = await axios.post(
+      `https://aip.baidubce.com/rest/2.0/ocr/v1/handwriting?access_token=${accessToken}`,
+      new URLSearchParams({
+        image: imageBase64
+      }).toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        timeout: 30000
+      }
+    );
+
+    const wordsResult = ocrRes.data?.words_result || [];
+    const text = wordsResult.map(item => item.words).join("\n").trim();
+
+    if (!text) {
+      return res.status(200).json({
+        text: "",
+        warning: "未识别到清晰文字，请尽量正面拍摄、保证光线充足、字迹清晰。"
+      });
+    }
+
+    res.json({ text });
+  } catch (error) {
+    console.error("[OCR] 百度OCR错误:", error?.response?.data || error.message || error);
+
+    res.status(500).json({
+      error: "图片识别失败，请换一张更清晰的照片再试。"
+    });
+  }
+});
 
 app.post("/score", async (req, res) => {
   const essay = req.body?.essay;
