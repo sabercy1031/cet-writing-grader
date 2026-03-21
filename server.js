@@ -68,7 +68,7 @@ function countWords(text) {
   return trimmed.split(/\s+/).filter(Boolean).length;
 }
 
-// 只去掉明显机器噪声，不替学生“润色作文”
+// 评分前的基础清洗：只去掉明显机器噪声，不替学生润色作文
 function cleanEssay(text) {
   let cleaned = String(text || "");
 
@@ -90,6 +90,99 @@ function cleanEssay(text) {
   cleaned = cleaned.replace(/([,.;!?])([A-Za-z])/g, "$1 $2");
 
   return cleaned.trim();
+}
+
+// OCR 专用清洗：尽量提纯英文正文，减少标题 / 中文译文 / 版头干扰
+function cleanOCRText(text) {
+  if (!text) return "";
+
+  let lines = String(text)
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  // 1. 先过滤明显无关的中文标题和说明
+  lines = lines.filter(line => {
+    const hasEnglish = /[A-Za-z]/.test(line);
+    const hasChinese = /[\u4e00-\u9fa5]/.test(line);
+
+    // 纯中文行基本不要
+    if (hasChinese && !hasEnglish) return false;
+
+    // 明显无关标题 / 说明
+    if (/^\d{4}年\d{1,2}月$/.test(line)) return false;
+    if (/四级作文预测/.test(line)) return false;
+    if (/六级作文预测/.test(line)) return false;
+    if (/译文参考/.test(line)) return false;
+    if (/作文预测一/.test(line)) return false;
+    if (/作文预测二/.test(line)) return false;
+    if (/^\(?\d+篇\)?$/.test(line)) return false;
+
+    return true;
+  });
+
+  let cleaned = lines.join("\n");
+
+  // 2. 如果出现“译文参考”，后面通常是中文翻译，直接截断
+  cleaned = cleaned.split(/译文参考[:：]?/)[0];
+
+  // 3. 再按行过滤：只保留以英文为主的内容
+  let englishLines = cleaned
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => {
+      const englishChars = (line.match(/[A-Za-z]/g) || []).length;
+      const chineseChars = (line.match(/[\u4e00-\u9fa5]/g) || []).length;
+
+      // 完全没英文，去掉
+      if (englishChars === 0) return false;
+
+      // 中文明显多于英文，去掉
+      if (chineseChars > englishChars) return false;
+
+      return true;
+    });
+
+  cleaned = englishLines.join("\n");
+
+  // 4. 修复常见 OCR 粘连与格式问题
+  cleaned = cleaned
+    // 小写后面直接接大写，补空格
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+
+    // 数字和字母粘连
+    .replace(/([a-zA-Z])(\d)/g, "$1 $2")
+    .replace(/(\d)([a-zA-Z])/g, "$1 $2")
+
+    // 常见 OCR 粘连修复
+    .replace(/\btouse\b/gi, "to use")
+    .replace(/\bforall\b/gi, "for all")
+    .replace(/\binthe\b/gi, "in the")
+    .replace(/\bonthe\b/gi, "on the")
+    .replace(/\bfromthe\b/gi, "from the")
+    .replace(/\bwiththe\b/gi, "with the")
+    .replace(/\bforthe\b/gi, "for the")
+    .replace(/\btothe\b/gi, "to the")
+    .replace(/\bandthe\b/gi, "and the")
+    .replace(/\bofthe\b/gi, "of the")
+
+    // 标点后补空格
+    .replace(/([,.;!?])([A-Za-z])/g, "$1 $2")
+
+    // 去掉多余空格
+    .replace(/[ \t]+/g, " ")
+
+    // 压缩多空行
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  // 5. 如果首行是纯英文标题，且后面正文很多，保留即可
+  // 不再强删标题，避免误删作文题目
+
+  return cleaned;
 }
 
 function buildPrompt(essay, wordCount) {
@@ -413,16 +506,17 @@ app.post("/ocr", upload.single("image"), async (req, res) => {
     );
 
     const wordsResult = ocrRes.data?.words_result || [];
-    const text = wordsResult.map(item => item.words).join("\n").trim();
+    const rawText = wordsResult.map(item => item.words).join("\n").trim();
+    const cleanedText = cleanOCRText(rawText);
 
-    if (!text) {
+    if (!cleanedText) {
       return res.status(200).json({
         text: "",
-        warning: "未识别到清晰文字，请尽量正面拍摄、保证光线充足、字迹清晰。"
+        warning: "未识别到清晰英文正文，请尽量正面拍摄、保证光线充足、字迹清晰。"
       });
     }
 
-    res.json({ text });
+    res.json({ text: cleanedText });
   } catch (error) {
     console.error("[OCR] 百度OCR错误:", error?.response?.data || error.message || error);
 
