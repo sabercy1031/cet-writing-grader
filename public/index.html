@@ -142,6 +142,26 @@
       color: #dc2626;
     }
 
+    .ocr-status.warning {
+      color: #b45309;
+      font-weight: 600;
+    }
+
+    .system-note {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #6b7280;
+    }
+
+    .system-note strong {
+      color: #374151;
+    }
+
     textarea {
       width: 100%;
       min-height: 240px;
@@ -618,6 +638,10 @@
 
       <textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
 
+      <div class="system-note">
+        <strong>说明：</strong>如果你使用了图片识别，建议先检查识别结果再评分。系统评分前可能会做轻微格式整理，例如补空格、处理断行和标点间距，但不会替你纠正语法、拼写或润色表达。
+      </div>
+
       <div class="editor-footer">
         <div class="counter-wrap">
           <div class="counter" id="counter">当前词数：0</div>
@@ -656,6 +680,8 @@
     let sectionCopyMap = {};
     let hasStructuredResult = false;
     let isOcrLoading = false;
+    let ocrNeedsReview = false;
+    let isApplyingOcrResult = false;
 
     function getPageHeight() {
       return Math.max(
@@ -1059,7 +1085,16 @@
       ocrStatus.className = `ocr-status${type ? " " + type : ""}`;
     }
 
-    textarea.addEventListener("input", updateWordCounter);
+    textarea.addEventListener("input", () => {
+      updateWordCounter();
+
+      if (isApplyingOcrResult) return;
+
+      if (ocrNeedsReview) {
+        ocrNeedsReview = false;
+        setOcrStatus("你已手动检查或修改文本，现在可以开始评分。", "success");
+      }
+    });
 
     window.addEventListener("scroll", () => {
       autoFollow = pageNearBottom();
@@ -1119,9 +1154,12 @@
           return;
         }
 
+        isApplyingOcrResult = true;
+
         if (textarea.value.trim()) {
           const shouldAppend = confirm("文本框里已经有内容了。点击“确定”会把识别结果追加到现有内容后面；点击“取消”则不导入。");
           if (!shouldAppend) {
+            isApplyingOcrResult = false;
             setOcrStatus("已取消导入识别结果。", "");
             return;
           }
@@ -1131,11 +1169,13 @@
         }
 
         updateWordCounter();
-        setOcrStatus("图片识别完成，请检查并修改识别结果后再评分。", "success");
+        ocrNeedsReview = true;
+        setOcrStatus("图片识别完成。请先检查并修改识别结果，再开始评分。", "warning");
         showToast("识别成功");
       } catch (error) {
         setOcrStatus(error.message || "图片识别失败，请换一张更清晰的照片再试。", "error");
       } finally {
+        isApplyingOcrResult = false;
         isOcrLoading = false;
         ocrBtn.disabled = false;
         ocrBtn.textContent = "图片识别";
@@ -1153,6 +1193,29 @@
 
       if (wordCount < 30) {
         alert("作文词数过少，请至少输入 30 个词后再评分。");
+        return;
+      }
+
+      if (ocrNeedsReview) {
+        const continueAfterOcr = confirm(
+          "⚠️ 检测到你刚使用了图片识别。\n\n建议先检查并修改识别结果，再开始评分，否则 OCR 错词可能影响分数准确性。\n\n点击“确定”继续评分，点击“取消”返回检查文本。"
+        );
+
+        if (!continueAfterOcr) {
+          return;
+        }
+      }
+
+      const confirmScore = confirm(
+        `开始评分前，请确认：\n\n` +
+        `1. 这已经是你准备提交的版本\n` +
+        `2. 你已检查明显拼写或识别错误\n` +
+        `3. 当前词数：${wordCount} 词\n\n` +
+        `说明：系统评分前可能会做轻微格式整理，但不会替你纠正语法、拼写或润色表达。\n\n` +
+        `确认开始评分吗？`
+      );
+
+      if (!confirmScore) {
         return;
       }
 
@@ -1215,6 +1278,7 @@
         if (rawResultText.trim()) {
           renderStructuredResult(rawResultText);
           hasSuccess = true;
+          ocrNeedsReview = false;
           scrollPageToBottom(false, false);
         } else {
           result.innerHTML = `<div class="raw-stream-box">请求失败，请检查服务器</div>`;
