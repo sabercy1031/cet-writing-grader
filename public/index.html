@@ -107,8 +107,17 @@
       box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
     }
 
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
     .section-title {
-      margin: 0 0 12px;
+      margin: 0;
       font-size: 18px;
       font-weight: 700;
       color: #111827;
@@ -625,7 +634,10 @@
     </div>
 
     <div class="editor-card">
-      <h2 class="section-title">输入作文</h2>
+      <div class="section-title-row">
+        <h2 class="section-title">输入作文</h2>
+        <button id="resetBtn" class="secondary-btn" type="button">重新开始 / 新作文</button>
+      </div>
 
       <div class="ocr-toolbar">
         <input id="imageUpload" class="ocr-file" type="file" accept="image/*" />
@@ -670,6 +682,7 @@
     const imageUpload = document.getElementById("imageUpload");
     const ocrBtn = document.getElementById("ocrBtn");
     const ocrStatus = document.getElementById("ocrStatus");
+    const resetBtn = document.getElementById("resetBtn");
 
     let autoFollow = true;
     let isStreaming = false;
@@ -682,6 +695,8 @@
     let isOcrLoading = false;
     let ocrNeedsReview = false;
     let isApplyingOcrResult = false;
+
+    const defaultOcrStatusText = "建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。";
 
     function getPageHeight() {
       return Math.max(
@@ -1085,6 +1100,53 @@
       ocrStatus.className = `ocr-status${type ? " " + type : ""}`;
     }
 
+    function resetEditorState(options = {}) {
+      const {
+        clearTextarea = true,
+        clearResult = true,
+        resetButtonText = true,
+        resetOcr = true,
+        scrollToTop = false
+      } = options;
+
+      if (clearTextarea) {
+        textarea.value = "";
+      }
+
+      if (clearResult) {
+        result.innerHTML = "";
+      }
+
+      if (resetButtonText) {
+        button.innerText = "开始评分";
+        button.disabled = false;
+      }
+
+      if (resetOcr) {
+        ocrNeedsReview = false;
+        isApplyingOcrResult = false;
+        imageUpload.value = "";
+        setOcrStatus(defaultOcrStatusText, "");
+      }
+
+      rawResultText = "";
+      isEssayExpanded = false;
+      hasStructuredResult = false;
+      sectionCopyMap = {};
+      hasSuccess = false;
+      isStreaming = false;
+      isLoading = false;
+      isOcrLoading = false;
+      autoFollow = true;
+
+      updateWordCounter();
+      updateScrollButton();
+
+      if (scrollToTop) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+
     textarea.addEventListener("input", () => {
       updateWordCounter();
 
@@ -1105,6 +1167,19 @@
       autoFollow = true;
       scrollPageToBottom(true, true);
       updateScrollButton();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      const hasText = textarea.value.trim().length > 0;
+      const hasResult = hasResultContent();
+
+      if (hasText || hasResult) {
+        const confirmed = confirm("确定要重新开始吗？当前输入内容和本次评分结果将被清空。");
+        if (!confirmed) return;
+      }
+
+      resetEditorState({ scrollToTop: true });
+      showToast("已准备好开始新作文");
     });
 
     ocrBtn.onclick = async () => {
