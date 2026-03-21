@@ -755,10 +755,6 @@
         .replace(/'/g, "&#39;");
     }
 
-    function escapeRegExp(str) {
-      return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    }
-
     function normalizeAiText(text) {
       let normalized = String(text || "").replace(/\r/g, "").trim();
 
@@ -773,21 +769,42 @@
       return normalized.trim();
     }
 
-    function extractSection(text, title, nextTitles) {
-      const escapedTitle = escapeRegExp(title);
-      const titlePattern = `(?:^|\\n)\\s*${escapedTitle}\\s*`;
+    function findSectionStart(text, title) {
+      const patterns = [
+        `\n${title}\n`,
+        `\n${title}`,
+        `${title}\n`,
+        `${title}`
+      ];
 
-      const nextPattern = nextTitles.length
-        ? nextTitles.map(item => `(?:^|\\n)\\s*${escapeRegExp(item)}\\s*`).join("|")
-        : "";
+      for (const pattern of patterns) {
+        const index = text.indexOf(pattern);
+        if (index !== -1) {
+          return index + pattern.indexOf(title);
+        }
+      }
+      return -1;
+    }
 
-      const regex = new RegExp(
-        `${titlePattern}\\n?([\\s\\S]*?)(?=${nextPattern ? `${nextPattern}` : "$"})`,
-        "m"
-      );
+    function extractSectionByTitles(text, title, allTitles) {
+      const start = findSectionStart(text, title);
+      if (start === -1) return "";
 
-      const match = text.match(regex);
-      return match ? match[1].trim() : "";
+      const contentStart = start + title.length;
+      let end = text.length;
+
+      for (const nextTitle of allTitles) {
+        if (nextTitle === title) continue;
+        const nextStart = findSectionStart(text.slice(contentStart), nextTitle);
+        if (nextStart !== -1) {
+          const absoluteNextStart = contentStart + nextStart;
+          if (absoluteNextStart > start && absoluteNextStart < end) {
+            end = absoluteNextStart;
+          }
+        }
+      }
+
+      return text.slice(contentStart, end).trim();
     }
 
     function sectionToList(sectionText) {
@@ -837,46 +854,21 @@
     function parseStructuredResult(text) {
       const cleanText = normalizeAiText(text);
 
-      const titles = {
-        score: "【预测分数】",
-        advantages: "【优点】",
-        problems: "【问题】",
-        suggestions: "【修改建议】",
-        revisedSentences: "【参考修改句】",
-        highScoreEssay: "【高分范文】"
-      };
+      const titles = [
+        "【预测分数】",
+        "【优点】",
+        "【问题】",
+        "【修改建议】",
+        "【参考修改句】",
+        "【高分范文】"
+      ];
 
-      const scoreText = extractSection(cleanText, titles.score, [
-        titles.advantages,
-        titles.problems,
-        titles.suggestions,
-        titles.revisedSentences,
-        titles.highScoreEssay
-      ]);
-
-      const advantagesText = extractSection(cleanText, titles.advantages, [
-        titles.problems,
-        titles.suggestions,
-        titles.revisedSentences,
-        titles.highScoreEssay
-      ]);
-
-      const problemsText = extractSection(cleanText, titles.problems, [
-        titles.suggestions,
-        titles.revisedSentences,
-        titles.highScoreEssay
-      ]);
-
-      const suggestionsText = extractSection(cleanText, titles.suggestions, [
-        titles.revisedSentences,
-        titles.highScoreEssay
-      ]);
-
-      const revisedSentencesText = extractSection(cleanText, titles.revisedSentences, [
-        titles.highScoreEssay
-      ]);
-
-      const highScoreEssayText = extractSection(cleanText, titles.highScoreEssay, []);
+      const scoreText = extractSectionByTitles(cleanText, "【预测分数】", titles);
+      const advantagesText = extractSectionByTitles(cleanText, "【优点】", titles);
+      const problemsText = extractSectionByTitles(cleanText, "【问题】", titles);
+      const suggestionsText = extractSectionByTitles(cleanText, "【修改建议】", titles);
+      const revisedSentencesText = extractSectionByTitles(cleanText, "【参考修改句】", titles);
+      const highScoreEssayText = extractSectionByTitles(cleanText, "【高分范文】", titles);
 
       const scoreValue = extractScoreValue(scoreText, cleanText);
       const scoreNumber = scoreValue ? Number(scoreValue) : null;
