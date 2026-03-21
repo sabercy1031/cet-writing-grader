@@ -687,6 +687,11 @@
     let ocrNeedsReview = false;
     let isApplyingOcrResult = false;
 
+    let scoreAbortController = null;
+    let ocrAbortController = null;
+    let activeScoreRequestId = 0;
+    let activeOcrRequestId = 0;
+
     const defaultOcrStatusText = "建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。";
 
     function getPageHeight() {
@@ -1162,14 +1167,44 @@
       ocrStatus.className = `ocr-status${type ? " " + type : ""}`;
     }
 
+    function abortActiveScoreRequest() {
+      if (scoreAbortController) {
+        try {
+          scoreAbortController.abort();
+        } catch (_) {}
+      }
+      scoreAbortController = null;
+      activeScoreRequestId += 1;
+      isStreaming = false;
+      isLoading = false;
+    }
+
+    function abortActiveOcrRequest() {
+      if (ocrAbortController) {
+        try {
+          ocrAbortController.abort();
+        } catch (_) {}
+      }
+      ocrAbortController = null;
+      activeOcrRequestId += 1;
+      isOcrLoading = false;
+      isApplyingOcrResult = false;
+    }
+
     function resetEditorState(options = {}) {
       const {
         clearTextarea = true,
         clearResult = true,
         resetButtonText = true,
         resetOcr = true,
-        scrollToTop = false
+        scrollToTop = false,
+        abortRunningTasks = true
       } = options;
+
+      if (abortRunningTasks) {
+        abortActiveScoreRequest();
+        abortActiveOcrRequest();
+      }
 
       if (clearTextarea) {
         textarea.value = "";
@@ -1182,6 +1217,8 @@
       if (resetButtonText) {
         button.innerText = "开始评分";
         button.disabled = false;
+        ocrBtn.disabled = false;
+        ocrBtn.textContent = "图片识别";
       }
 
       if (resetOcr) {
@@ -1196,9 +1233,6 @@
       hasStructuredResult = false;
       sectionCopyMap = {};
       hasSuccess = false;
-      isStreaming = false;
-      isLoading = false;
-      isOcrLoading = false;
       autoFollow = true;
 
       updateWordCounter();
@@ -1234,13 +1268,19 @@
     resetBtn.addEventListener("click", () => {
       const hasText = textarea.value.trim().length > 0;
       const hasResult = hasResultContent();
+      const isBusy = isLoading || isOcrLoading;
 
-      if (hasText || hasResult) {
-        const confirmed = confirm("确定要重新开始吗？当前输入内容和本次评分结果将被清空。");
+      let message = "确定要重新开始吗？当前输入内容和本次评分结果将被清空。";
+      if (isBusy) {
+        message = "当前任务仍在进行中。点击“确定”会立即停止当前识别/评分，并清空输入内容和结果。";
+      }
+
+      if (hasText || hasResult || isBusy) {
+        const confirmed = confirm(message);
         if (!confirmed) return;
       }
 
-      resetEditorState({ scrollToTop: true });
+      resetEditorState({ scrollToTop: true, abortRunningTasks: true });
       showToast("已准备好开始新作文");
     });
 
@@ -1263,6 +1303,11 @@
         return;
       }
 
+      abortActiveOcrRequest();
+      const thisOcrRequestId = activeOcrRequestId + 1;
+      activeOcrRequestId = thisOcrRequestId;
+      ocrAbortController = new AbortController();
+
       isOcrLoading = true;
       ocrBtn.disabled = true;
       ocrBtn.textContent = "识别中...";
@@ -1275,10 +1320,15 @@
 
         const response = await fetch("/ocr", {
           method: "POST",
-          body: formData
+          body: formData,
+          signal: ocrAbortController.signal
         });
 
+        if (thisOcrRequestId !== activeOcrRequestId) return;
+
         const data = await response.json();
+
+        if (thisOcrRequestId !== activeOcrRequestId) return;
 
         if (!response.ok) {
           throw new Error(data.error || "图片识别失败");
@@ -1310,12 +1360,19 @@
         setOcrStatus("图片识别完成。请先检查并修改识别结果，再开始评分。", "warning");
         showToast("识别成功");
       } catch (error) {
+        if (error.name === "AbortError") {
+          return;
+        }
+        if (thisOcrRequestId !== activeOcrRequestId) return;
         setOcrStatus(error.message || "图片识别失败，请换一张更清晰的照片再试。", "error");
       } finally {
-        isApplyingOcrResult = false;
-        isOcrLoading = false;
-        ocrBtn.disabled = false;
-        ocrBtn.textContent = "图片识别";
+        if (thisOcrRequestId === activeOcrRequestId) {
+          isApplyingOcrResult = false;
+          isOcrLoading = false;
+          ocrBtn.disabled = false;
+          ocrBtn.textContent = "图片识别";
+          ocrAbortController = null;
+        }
       }
     };
 
@@ -1356,6 +1413,11 @@
         return;
       }
 
+      abortActiveScoreRequest();
+      const thisScoreRequestId = activeScoreRequestId + 1;
+      activeScoreRequestId = thisScoreRequestId;
+      scoreAbortController = new AbortController();
+
       isLoading = true;
       hasSuccess = false;
       isStreaming = true;
@@ -1378,16 +1440,21 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ essay })
+          body: JSON.stringify({ essay }),
+          signal: scoreAbortController.signal
         });
+
+        if (thisScoreRequestId !== activeScoreRequestId) return;
 
         if (!response.ok) {
           const errText = await response.text();
+          if (thisScoreRequestId !== activeScoreRequestId) return;
           result.innerHTML = `<div class="raw-stream-box">${escapeHtml(errText || "请求失败，请检查服务器")}</div>`;
           return;
         }
 
         if (!response.body) {
+          if (thisScoreRequestId !== activeScoreRequestId) return;
           result.innerHTML = `<div class="raw-stream-box">请求失败，服务器未返回可读取内容</div>`;
           return;
         }
@@ -1401,16 +1468,33 @@
 
         while (true) {
           const { value, done } = await reader.read();
+          if (thisScoreRequestId !== activeScoreRequestId) {
+            try {
+              await reader.cancel();
+            } catch (_) {}
+            return;
+          }
+
           if (done) break;
 
           const text = decoder.decode(value, { stream: true });
           if (text) {
             rawResultText += text;
+
+            if (thisScoreRequestId !== activeScoreRequestId) {
+              try {
+                await reader.cancel();
+              } catch (_) {}
+              return;
+            }
+
             rawStreamBox.innerText = rawResultText;
             scrollPageToBottom(false, false);
             updateScrollButton();
           }
         }
+
+        if (thisScoreRequestId !== activeScoreRequestId) return;
 
         if (rawResultText.trim()) {
           renderStructuredResult(rawResultText);
@@ -1421,16 +1505,25 @@
           result.innerHTML = `<div class="raw-stream-box">请求失败，请检查服务器</div>`;
         }
       } catch (e) {
+        if (e.name === "AbortError") {
+          return;
+        }
+
+        if (thisScoreRequestId !== activeScoreRequestId) return;
+
         if (!hasSuccess && !rawResultText.trim()) {
           result.innerHTML = `<div class="raw-stream-box">请求失败，请检查服务器</div>`;
         }
       } finally {
-        isStreaming = false;
-        autoFollow = pageNearBottom();
-        updateScrollButton();
-        button.disabled = false;
-        button.innerText = "重新评分";
-        isLoading = false;
+        if (thisScoreRequestId === activeScoreRequestId) {
+          isStreaming = false;
+          autoFollow = pageNearBottom();
+          updateScrollButton();
+          button.disabled = false;
+          button.innerText = "重新评分";
+          isLoading = false;
+          scoreAbortController = null;
+        }
       }
     };
   </script>
