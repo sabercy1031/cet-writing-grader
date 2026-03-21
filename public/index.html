@@ -336,15 +336,6 @@
       border-color: rgba(255, 255, 255, 0.28);
     }
 
-    .score-label {
-      position: relative;
-      z-index: 1;
-      font-size: 14px;
-      opacity: 0.92;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-
     .score-value {
       position: relative;
       z-index: 1;
@@ -759,14 +750,35 @@
         .replace(/'/g, "&#39;");
     }
 
+    function escapeRegExp(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function normalizeAiText(text) {
+      let normalized = String(text || "").replace(/\r/g, "").trim();
+
+      normalized = normalized
+        .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+        .replace(/^\s*[-*]\s+(?=【)/gm, "")
+        .replace(/^\s*\d+\.\s+(?=【)/gm, "")
+        .replace(/\*\*\s*(【[^】]+】)\s*\*\*/g, "$1")
+        .replace(/\*\s*(【[^】]+】)\s*\*/g, "$1")
+        .replace(/`(【[^】]+】)`/g, "$1");
+
+      return normalized.trim();
+    }
+
     function extractSection(text, title, nextTitles) {
-      const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escapedTitle = escapeRegExp(title);
+      const titlePattern = `(?:^|\\n)\\s*${escapedTitle}\\s*`;
+
       const nextPattern = nextTitles.length
-        ? nextTitles.map(item => item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")
+        ? nextTitles.map(item => `(?:^|\\n)\\s*${escapeRegExp(item)}\\s*`).join("|")
         : "";
 
       const regex = new RegExp(
-        `【${escapedTitle}】([\\s\\S]*?)(?=${nextPattern ? `【(?:${nextPattern})】` : "$"}|$)`
+        `${titlePattern}\\n?([\\s\\S]*?)(?=${nextPattern ? `${nextPattern}` : "$"})`,
+        "m"
       );
 
       const match = text.match(regex);
@@ -806,23 +818,69 @@
       return { level: "仍需提升", surpass: 15 };
     }
 
+    function extractScoreValue(scoreText, allText) {
+      const candidates = [scoreText || "", allText || ""];
+
+      for (const source of candidates) {
+        const match = source.match(/(\d+(?:\.\d+)?)\s*\/\s*15/);
+        if (match) return match[1];
+      }
+
+      return "";
+    }
+
     function parseStructuredResult(text) {
-      const cleanText = text.replace(/\r/g, "").trim();
+      const cleanText = normalizeAiText(text);
 
-      const scoreText = extractSection(cleanText, "预测分数", ["优点", "问题", "修改建议", "参考修改句", "高分范文"]);
-      const advantagesText = extractSection(cleanText, "优点", ["问题", "修改建议", "参考修改句", "高分范文"]);
-      const problemsText = extractSection(cleanText, "问题", ["修改建议", "参考修改句", "高分范文"]);
-      const suggestionsText = extractSection(cleanText, "修改建议", ["参考修改句", "高分范文"]);
-      const revisedSentencesText = extractSection(cleanText, "参考修改句", ["高分范文"]);
-      const highScoreEssayText = extractSection(cleanText, "高分范文", []);
+      const titles = {
+        score: "【预测分数】",
+        advantages: "【优点】",
+        problems: "【问题】",
+        suggestions: "【修改建议】",
+        revisedSentences: "【参考修改句】",
+        highScoreEssay: "【高分范文】"
+      };
 
-      const scoreMatch = scoreText.match(/(\d+(?:\.\d+)?)\s*\/\s*15/);
-      const scoreNumber = scoreMatch ? Number(scoreMatch[1]) : null;
+      const scoreText = extractSection(cleanText, titles.score, [
+        titles.advantages,
+        titles.problems,
+        titles.suggestions,
+        titles.revisedSentences,
+        titles.highScoreEssay
+      ]);
+
+      const advantagesText = extractSection(cleanText, titles.advantages, [
+        titles.problems,
+        titles.suggestions,
+        titles.revisedSentences,
+        titles.highScoreEssay
+      ]);
+
+      const problemsText = extractSection(cleanText, titles.problems, [
+        titles.suggestions,
+        titles.revisedSentences,
+        titles.highScoreEssay
+      ]);
+
+      const suggestionsText = extractSection(cleanText, titles.suggestions, [
+        titles.revisedSentences,
+        titles.highScoreEssay
+      ]);
+
+      const revisedSentencesText = extractSection(cleanText, titles.revisedSentences, [
+        titles.highScoreEssay
+      ]);
+
+      const highScoreEssayText = extractSection(cleanText, titles.highScoreEssay, []);
+
+      const scoreValue = extractScoreValue(scoreText, cleanText);
+      const scoreNumber = scoreValue ? Number(scoreValue) : null;
       const levelInfo = scoreNumber !== null ? getLevelInfo(scoreNumber) : null;
 
       return {
+        normalizedRaw: cleanText,
         scoreRaw: scoreText || "",
-        scoreValue: scoreMatch ? scoreMatch[1] : "",
+        scoreValue,
         scoreNumber,
         level: levelInfo ? levelInfo.level : "",
         surpass: levelInfo ? levelInfo.surpass : "",
@@ -832,6 +890,30 @@
         revisedSentences: sectionToList(revisedSentencesText),
         highScoreEssay: highScoreEssayText.trim()
       };
+    }
+
+    function shouldFallback(parsed) {
+      const hasScore = !!parsed.scoreValue;
+      const hasAdvantages = parsed.advantages.length > 0;
+      const hasProblems = parsed.problems.length > 0;
+      const hasSuggestions = parsed.suggestions.length > 0;
+      const hasSentences = parsed.revisedSentences.length > 0;
+      const hasEssay = !!parsed.highScoreEssay;
+
+      const coreCount = [
+        hasScore,
+        hasAdvantages,
+        hasProblems,
+        hasSuggestions,
+        hasSentences,
+        hasEssay
+      ].filter(Boolean).length;
+
+      if (!hasScore) return true;
+      if (!hasSuggestions) return true;
+      if (coreCount < 4) return true;
+
+      return false;
     }
 
     function renderList(items) {
@@ -934,15 +1016,7 @@
     function renderStructuredResult(rawText) {
       const parsed = parseStructuredResult(rawText);
 
-      const ok =
-        parsed.scoreRaw ||
-        parsed.advantages.length ||
-        parsed.problems.length ||
-        parsed.suggestions.length ||
-        parsed.revisedSentences.length ||
-        parsed.highScoreEssay;
-
-      if (!ok) {
+      if (shouldFallback(parsed)) {
         renderFallback(rawText);
         return;
       }
@@ -950,14 +1024,8 @@
       hasStructuredResult = true;
       setupSectionCopyMap(parsed, rawText);
 
-      const scoreDisplay = parsed.scoreValue
-        ? `${escapeHtml(parsed.scoreValue)} / 15`
-        : escapeHtml(parsed.scoreRaw || "未识别");
-
-      const scoreDesc = parsed.scoreValue
-        ? "这是 AI 结合四六级评分标准给出的预测分数，可作为你本次作文水平的直观参考。超越百分比为体验化估算值，用于增强反馈感。"
-        : "本次结果未能完整解析出分数字段，但原始批改内容仍已保留。";
-
+      const scoreDisplay = `${escapeHtml(parsed.scoreValue)} / 15`;
+      const scoreDesc = "这是 AI 结合四六级评分标准给出的预测分数，可作为你本次作文水平的直观参考。超越百分比为体验化估算值，用于增强反馈感。";
       const essayIsLong = parsed.highScoreEssay && parsed.highScoreEssay.length > 320;
 
       result.innerHTML = `
@@ -977,16 +1045,10 @@
 
             <div class="score-value">${scoreDisplay}</div>
 
-            ${
-              parsed.scoreValue
-                ? `
-                  <div class="score-meta">
-                    <span class="score-pill">评价等级：${escapeHtml(parsed.level)}</span>
-                    <span class="score-pill">估算超越：${escapeHtml(String(parsed.surpass))}% 的考生</span>
-                  </div>
-                `
-                : ""
-            }
+            <div class="score-meta">
+              <span class="score-pill">评价等级：${escapeHtml(parsed.level)}</span>
+              <span class="score-pill">估算超越：${escapeHtml(String(parsed.surpass))}% 的考生</span>
+            </div>
 
             <div class="score-desc">${scoreDesc}</div>
 
