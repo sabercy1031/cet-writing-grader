@@ -140,10 +140,7 @@ function cleanOCRText(text) {
       const englishChars = (line.match(/[A-Za-z]/g) || []).length;
       const chineseChars = (line.match(/[\u4e00-\u9fa5]/g) || []).length;
 
-      // 完全没英文，去掉
       if (englishChars === 0) return false;
-
-      // 中文明显多于英文，去掉
       if (chineseChars > englishChars) return false;
 
       return true;
@@ -153,14 +150,9 @@ function cleanOCRText(text) {
 
   // 4. 修复常见 OCR 粘连与格式问题
   cleaned = cleaned
-    // 小写后面直接接大写，补空格
     .replace(/([a-z])([A-Z])/g, "$1 $2")
-
-    // 数字和字母粘连
     .replace(/([a-zA-Z])(\d)/g, "$1 $2")
     .replace(/(\d)([a-zA-Z])/g, "$1 $2")
-
-    // 常见 OCR 粘连修复
     .replace(/\btouse\b/gi, "to use")
     .replace(/\bforall\b/gi, "for all")
     .replace(/\binthe\b/gi, "in the")
@@ -171,19 +163,10 @@ function cleanOCRText(text) {
     .replace(/\btothe\b/gi, "to the")
     .replace(/\bandthe\b/gi, "and the")
     .replace(/\bofthe\b/gi, "of the")
-
-    // 标点后补空格
     .replace(/([,.;!?])([A-Za-z])/g, "$1 $2")
-
-    // 去掉多余空格
     .replace(/[ \t]+/g, " ")
-
-    // 压缩多空行
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-
-  // 5. 如果首行是纯英文标题，且后面正文很多，保留即可
-  // 不再强删标题，避免误删作文题目
 
   return cleaned;
 }
@@ -554,11 +537,6 @@ app.post("/score", async (req, res) => {
     apiKey
   });
 
-  let clientAborted = false;
-  req.on("close", () => {
-    clientAborted = true;
-  });
-
   try {
     const cleanedEssay = cleanEssay(trimmedEssay);
     const prompt = buildPrompt(cleanedEssay, wordCount);
@@ -600,10 +578,6 @@ app.post("/score", async (req, res) => {
     let wroteAnyContent = false;
 
     for await (const chunk of completion) {
-      if (clientAborted) {
-        break;
-      }
-
       const content = chunk.choices?.[0]?.delta?.content;
 
       if (content) {
@@ -612,31 +586,26 @@ app.post("/score", async (req, res) => {
       }
     }
 
-    if (!clientAborted) {
-      if (wroteAnyContent) {
-        res.write(`\n${SCORE_STREAM_DONE_MARK}`);
-      } else {
-        res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
-      }
-      res.end();
+    if (wroteAnyContent) {
+      res.write(`\n${SCORE_STREAM_DONE_MARK}`);
+    } else {
+      res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
     }
+
+    res.end();
   } catch (error) {
     console.error("[SCORE] DeepSeek错误:", error);
 
-    if (clientAborted) {
-      return;
+    if (!res.headersSent) {
+      return res.status(500).send("AI评分失败，请检查服务器。");
     }
 
-    if (!res.headersSent) {
-      res.status(500).send("AI评分失败，请检查服务器。");
-    } else {
-      try {
-        res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
-      } catch (_) {}
-      try {
-        res.end();
-      } catch (_) {}
-    }
+    try {
+      res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
+    } catch (_) {}
+    try {
+      res.end();
+    } catch (_) {}
   }
 });
 
