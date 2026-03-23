@@ -675,9 +675,6 @@
     const ocrStatus = document.getElementById("ocrStatus");
     const resetBtn = document.getElementById("resetBtn");
 
-    const SCORE_STREAM_DONE_MARK = "[[SCORE_STREAM_DONE]]";
-    const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
-
     let autoFollow = true;
     let isStreaming = false;
     let isLoading = false;
@@ -770,21 +767,6 @@
         .replace(/`(【[^】]+】)`/g, "$1");
 
       return normalized.trim();
-    }
-
-    function removeInternalStreamMarks(text) {
-      return String(text || "")
-        .replace(new RegExp(`\\n?${SCORE_STREAM_DONE_MARK}`, "g"), "")
-        .replace(new RegExp(`\\n?${SCORE_STREAM_INTERRUPTED_MARK}`, "g"), "")
-        .trim();
-    }
-
-    function hasDoneMark(text) {
-      return String(text || "").includes(SCORE_STREAM_DONE_MARK);
-    }
-
-    function hasInterruptedMark(text) {
-      return String(text || "").includes(SCORE_STREAM_INTERRUPTED_MARK);
     }
 
     function findSectionStart(text, title) {
@@ -1460,14 +1442,12 @@
           const errText = await response.text();
           if (thisScoreRequestId !== activeScoreRequestId) return;
           result.innerHTML = `<div class="raw-stream-box">${escapeHtml(errText || "请求失败，请检查服务器")}</div>`;
-          showToast("评分失败，请稍后再试");
           return;
         }
 
         if (!response.body) {
           if (thisScoreRequestId !== activeScoreRequestId) return;
           result.innerHTML = `<div class="raw-stream-box">请求失败，服务器未返回可读取内容</div>`;
-          showToast("评分失败，服务器返回异常");
           return;
         }
 
@@ -1480,7 +1460,6 @@
 
         while (true) {
           const { value, done } = await reader.read();
-
           if (thisScoreRequestId !== activeScoreRequestId) {
             try {
               await reader.cancel();
@@ -1501,7 +1480,7 @@
               return;
             }
 
-            rawStreamBox.innerText = removeInternalStreamMarks(rawResultText);
+            rawStreamBox.innerText = rawResultText;
             scrollPageToBottom(false, false);
             updateScrollButton();
           }
@@ -1509,25 +1488,13 @@
 
         if (thisScoreRequestId !== activeScoreRequestId) return;
 
-        const streamSucceeded = hasDoneMark(rawResultText);
-        const streamInterrupted = hasInterruptedMark(rawResultText);
-        const cleanedResultText = removeInternalStreamMarks(rawResultText);
-
-        if (streamSucceeded && cleanedResultText.trim()) {
-          renderStructuredResult(cleanedResultText);
+        if (rawResultText.trim()) {
+          renderStructuredResult(rawResultText);
           hasSuccess = true;
           ocrNeedsReview = false;
           scrollPageToBottom(false, false);
         } else {
-          result.innerHTML = cleanedResultText.trim()
-            ? `<div class="raw-stream-box">${escapeHtml(cleanedResultText)}</div>`
-            : `<div class="raw-stream-box">评分未完整返回，请稍后重试。</div>`;
-
-          if (streamInterrupted) {
-            showToast("评分过程中断，本次不算成功评分");
-          } else {
-            showToast("评分未成功完成，请重试");
-          }
+          result.innerHTML = `<div class="raw-stream-box">请求失败，请检查服务器</div>`;
         }
       } catch (e) {
         if (e.name === "AbortError") {
@@ -1539,8 +1506,6 @@
         if (!hasSuccess && !rawResultText.trim()) {
           result.innerHTML = `<div class="raw-stream-box">请求失败，请检查服务器</div>`;
         }
-
-        showToast("评分失败，请检查网络或稍后再试");
       } finally {
         if (thisScoreRequestId === activeScoreRequestId) {
           isStreaming = false;
