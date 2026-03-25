@@ -11,6 +11,10 @@ const PORT = process.env.PORT || 3000;
 const publicDir = path.resolve(__dirname, "public");
 const indexPath = path.resolve(publicDir, "index.html");
 
+// 评分流内部标记：供前端判断是否真正成功完成
+const SCORE_STREAM_DONE_MARK = "[[SCORE_STREAM_DONE]]";
+const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
+
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
@@ -601,6 +605,9 @@ app.post("/score", async (req, res) => {
     apiKey
   });
 
+  // 新增：用于判定本次评分是否真正成功返回过有效内容
+  let wroteAnyContent = false;
+
   try {
     const cleanedEssay = cleanEssay(trimmedEssay);
     const prompt = buildPrompt(cleanedEssay, wordCount);
@@ -645,10 +652,18 @@ app.post("/score", async (req, res) => {
       const content = chunk.choices?.[0]?.delta?.content;
 
       if (content) {
+        wroteAnyContent = true;
         res.write(content);
       } else {
         res.write("");
       }
+    }
+
+    // 新增：评分流结束时写入内部标记，供前端判断是否成功
+    if (wroteAnyContent) {
+      res.write(`\n${SCORE_STREAM_DONE_MARK}`);
+    } else {
+      res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
     }
 
     res.end();
@@ -659,9 +674,11 @@ app.post("/score", async (req, res) => {
       res.status(500).send("AI评分失败，请检查服务器。");
     } else {
       try {
-        res.write("\n\n[系统错误：评分过程中断]");
+        res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
       } catch (_) {}
-      res.end();
+      try {
+        res.end();
+      } catch (_) {}
     }
   }
 });
