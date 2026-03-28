@@ -219,6 +219,38 @@
       line-height: 1.6;
     }
 
+    /* ── 新增：免费次数提示条样式 ── */
+    .free-score-bar {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .free-score-bar.has-quota {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #15803d;
+    }
+
+    .free-score-bar.low-quota {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #b45309;
+    }
+
+    .free-score-bar.no-quota {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+    }
+    /* ────────────────────────────── */
+
     .primary-btn {
       margin-top: 18px;
       padding: 13px 22px;
@@ -652,6 +684,10 @@
         </div>
       </div>
 
+      <!-- ── 新增：免费次数提示条 ── -->
+      <div id="freeScoreBar" class="free-score-bar has-quota"></div>
+      <!-- ────────────────────────── -->
+
       <button id="btn" class="primary-btn">开始评分</button>
     </div>
 
@@ -664,18 +700,60 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // ── 新增：后端成功判定标记常量 ──────────────────────────────
+    // ── 成功判定标记常量 ─────────────────────────────────────────
     const SCORE_STREAM_DONE_MARK = "[[SCORE_STREAM_DONE]]";
     const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
 
-    // ── 新增：清理内部标记，返回干净文本 ─────────────────────────
     function removeStreamMarks(text) {
       return text
         .replace(/\n?\[\[SCORE_STREAM_DONE\]\]/g, "")
         .replace(/\n?\[\[SCORE_STREAM_INTERRUPTED\]\]/g, "")
         .trim();
     }
-    // ─────────────────────────────────────────────────────────────
+
+    // ── 新增：免费次数常量与读写函数 ────────────────────────────
+    const FREE_SCORE_LIMIT = 3;
+    const FREE_SCORE_STORAGE_KEY = "cet_free_score_left";
+
+    function getFreeScoreLeft() {
+      const val = localStorage.getItem(FREE_SCORE_STORAGE_KEY);
+      if (val === null) {
+        localStorage.setItem(FREE_SCORE_STORAGE_KEY, String(FREE_SCORE_LIMIT));
+        return FREE_SCORE_LIMIT;
+      }
+      const num = parseInt(val, 10);
+      return isNaN(num) ? FREE_SCORE_LIMIT : Math.max(0, num);
+    }
+
+    function setFreeScoreLeft(value) {
+      const clamped = Math.max(0, value);
+      localStorage.setItem(FREE_SCORE_STORAGE_KEY, String(clamped));
+    }
+
+    function decreaseFreeScore() {
+      const current = getFreeScoreLeft();
+      if (current > 0) {
+        setFreeScoreLeft(current - 1);
+      }
+    }
+
+    function updateFreeScoreBar() {
+      const left = getFreeScoreLeft();
+      const bar = document.getElementById("freeScoreBar");
+      if (!bar) return;
+
+      if (left <= 0) {
+        bar.className = "free-score-bar no-quota";
+        bar.textContent = "⚠️ 免费次数已用完，暂时无法继续评分";
+      } else if (left === 1) {
+        bar.className = "free-score-bar low-quota";
+        bar.textContent = `⏳ 剩余免费评分次数：${left} 次（最后一次）`;
+      } else {
+        bar.className = "free-score-bar has-quota";
+        bar.textContent = `✅ 剩余免费评分次数：${left} 次`;
+      }
+    }
+    // ────────────────────────────────────────────────────────────
 
     const textarea = document.getElementById("essay");
     const result = document.getElementById("result");
@@ -1275,12 +1353,10 @@
       const hasResult = hasResultContent();
       const isBusy = isLoading || isOcrLoading;
 
-      // ── 修复1：原代码此处用双引号包含中文引号导致语法错误，改为模板字符串 ──
       let message = `确定要重新开始吗？当前输入内容和本次评分结果将被清空。`;
       if (isBusy) {
         message = `当前任务仍在进行中。点击"确定"会立即停止当前识别/评分，并清空输入内容和结果。`;
       }
-      // ────────────────────────────────────────────────────────────────────────
 
       if (hasText || hasResult || isBusy) {
         const confirmed = confirm(message);
@@ -1351,9 +1427,7 @@
         isApplyingOcrResult = true;
 
         if (textarea.value.trim()) {
-          // ── 修复1：同上，改为模板字符串避免引号冲突 ──
           const shouldAppend = confirm(`文本框里已经有内容了。点击"确定"会把识别结果追加到现有内容后面；点击"取消"则不导入。`);
-          // ────────────────────────────────────────────
           if (!shouldAppend) {
             isApplyingOcrResult = false;
             setOcrStatus("已取消导入识别结果。", "");
@@ -1387,9 +1461,20 @@
 
     bindJumpButtons();
     updateWordCounter();
+    // ── 新增：页面加载时初始化次数显示 ──
+    updateFreeScoreBar();
+    // ────────────────────────────────────
 
     button.onclick = async () => {
       if (isLoading || isOcrLoading) return;
+
+      // ── 新增：评分前先检查剩余次数 ──────────────────────────────
+      const freeLeft = getFreeScoreLeft();
+      if (freeLeft <= 0) {
+        alert("免费次数已用完，暂时无法继续评分");
+        return;
+      }
+      // ────────────────────────────────────────────────────────────
 
       const essay = textarea.value.trim();
       const wordCount = countWords(essay);
@@ -1401,11 +1486,8 @@
 
       if (ocrNeedsReview) {
         const continueAfterOcr = confirm(
-          // ── 修复1：改为模板字符串避免引号冲突 ──
           `⚠️ 检测到你刚使用了图片识别。\n\n建议先检查并修改识别结果，再开始评分，否则 OCR 错词可能影响分数准确性。\n\n点击"确定"继续评分，点击"取消"返回检查文本。`
-          // ────────────────────────────────────────
         );
-
         if (!continueAfterOcr) {
           return;
         }
@@ -1448,9 +1530,7 @@
       try {
         const response = await fetch("/score", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ essay }),
           signal: scoreAbortController.signal
         });
@@ -1480,9 +1560,7 @@
         while (true) {
           const { value, done } = await reader.read();
           if (thisScoreRequestId !== activeScoreRequestId) {
-            try {
-              await reader.cancel();
-            } catch (_) {}
+            try { await reader.cancel(); } catch (_) {}
             return;
           }
 
@@ -1493,15 +1571,11 @@
             rawResultText += text;
 
             if (thisScoreRequestId !== activeScoreRequestId) {
-              try {
-                await reader.cancel();
-              } catch (_) {}
+              try { await reader.cancel(); } catch (_) {}
               return;
             }
 
-            // ── 新增：流式展示时清掉内部标记，不让用户看到 ──
             rawStreamBox.innerText = removeStreamMarks(rawResultText);
-            // ─────────────────────────────────────────────────
             scrollPageToBottom(false, false);
             updateScrollButton();
           }
@@ -1509,7 +1583,6 @@
 
         if (thisScoreRequestId !== activeScoreRequestId) return;
 
-        // ── 新增：流结束后判断成功标记，决定是否结构化解析 ──
         const isSuccess = rawResultText.includes(SCORE_STREAM_DONE_MARK);
         const cleanedText = removeStreamMarks(rawResultText);
 
@@ -1517,24 +1590,24 @@
           renderStructuredResult(cleanedText);
           hasSuccess = true;
           ocrNeedsReview = false;
+
+          // ── 新增：确认成功后才扣次数并更新显示 ─────────────────
+          decreaseFreeScore();
+          updateFreeScoreBar();
+          // ────────────────────────────────────────────────────────
+
           scrollPageToBottom(false, false);
         } else {
           result.innerHTML = `<div class="raw-stream-box">评分失败，请检查网络或稍后再试</div>`;
         }
-        // ────────────────────────────────────────────────────
 
       } catch (e) {
-        if (e.name === "AbortError") {
-          return;
-        }
-
+        if (e.name === "AbortError") return;
         if (thisScoreRequestId !== activeScoreRequestId) return;
 
-        // ── 修复2：无论是否已收到部分流文本，只要最终没成功就统一显示失败提示 ──
         if (!hasSuccess) {
           result.innerHTML = `<div class="raw-stream-box">评分失败，请检查网络或稍后再试</div>`;
         }
-        // ──────────────────────────────────────────────────────────────────────
       } finally {
         if (thisScoreRequestId === activeScoreRequestId) {
           isStreaming = false;
