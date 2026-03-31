@@ -5,6 +5,9 @@ const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
 const multer = require("multer");
+const session = require("express-session");
+const bcrypt = require("bcrypt");
+const { pool, initDB } = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +20,17 @@ const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "cet-writing-grader-session-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false
+  }
+}));
 
 app.use((req, res, next) => {
   console.log(`[REQ] ${req.method} ${req.url}`);
@@ -532,6 +546,188 @@ async function getBaiduAccessToken() {
   return token;
 }
 
+async function checkAndResetDaily(dbClient, userId) {
+  await dbClient.query(
+    `
+      UPDATE users
+      SET free_score_left = 3,
+          last_reset_date = CURRENT_DATE
+      WHERE id = $1
+        AND last_reset_date < CURRENT_DATE
+    `,
+    [userId]
+  );
+
+  const result = await dbClient.query(
+    `
+      SELECT id, username, password_hash, free_score_left, last_reset_date
+      FROM users
+      WHERE id = $1
+    `,
+    [userId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function getUserForSession(userId) {
+  const dbClient = await pool.connect();
+  try {
+    await dbClient.query("BEGIN");
+
+    const locked = await dbClient.query(
+      `
+        SELECT id, username, password_hash, free_score_left, last_reset_date
+        FROM users
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [userId]
+    );
+
+    if (locked.rows.length === 0) {
+      await dbClient.query("ROLLBACK");
+      return null;
+    }
+
+    const freshUser = await checkAndResetDaily(dbClient, userId);
+
+    await dbClient.query("COMMIT");
+    return freshUser;
+  } catch (error) {
+    try {
+      await dbClient.query("ROLLBACK");
+    } catch (_) {}
+    throw error;
+  } finally {
+    dbClient.release();
+  }
+}
+
+app.post("/api/register", async (req, res) => {
+  const username = String(req.body?.username || "").trim();
+  const password = String(req.body?.password || "");
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "请填写用户名和密码" });
+  }
+
+  if (username.length < 2 || username.length > 50) {
+    return res.status(400).json({ error: "用户名长度需在 2-50 个字符之间" });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ error: "密码至少需要 6 位" });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `
+        INSERT INTO users (username, password_hash)
+        VALUES ($1, $2)
+        RETURNING id, username, free_score_left
+      `,
+      [username, passwordHash]
+    );
+
+    const user = result.rows[0];
+    req.session.userId = user.id;
+
+    res.json({
+      username: user.username,
+      freeScoreLeft: user.free_score_left
+    });
+  } catch (error) {
+    console.error("[AUTH] register error:", error);
+    res.status(400).json({ error: "用户名已存在或注册失败" });
+  }
+});
+
+app.post("/api/login", async (req, res) => {
+  const username = String(req.body?.username || "").trim();
+  const password = String(req.body?.password || "");
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "请填写用户名和密码" });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT id, username, password_hash
+        FROM users
+        WHERE username = $1
+        LIMIT 1
+      `,
+      [username]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(400).json({ error: "用户名或密码错误" });
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+
+    if (!ok) {
+      return res.status(400).json({ error: "用户名或密码错误" });
+    }
+
+    req.session.userId = user.id;
+
+    const freshUser = await getUserForSession(user.id);
+
+    if (!freshUser) {
+      return res.status(400).json({ error: "登录状态异常，请重试" });
+    }
+
+    res.json({
+      username: freshUser.username,
+      freeScoreLeft: freshUser.free_score_left
+    });
+  } catch (error) {
+    console.error("[AUTH] login error:", error);
+    res.status(500).json({ error: "登录失败，请稍后再试" });
+  }
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.error("[AUTH] logout error:", err);
+      return res.status(500).json({ error: "退出失败，请稍后再试" });
+    }
+    res.json({ ok: true });
+  });
+});
+
+app.get("/api/me", async (req, res) => {
+  if (!req.session?.userId) {
+    return res.json({ loggedIn: false });
+  }
+
+  try {
+    const user = await getUserForSession(req.session.userId);
+
+    if (!user) {
+      req.session.destroy(() => {});
+      return res.json({ loggedIn: false });
+    }
+
+    res.json({
+      loggedIn: true,
+      username: user.username,
+      freeScoreLeft: user.free_score_left
+    });
+  } catch (error) {
+    console.error("[AUTH] me error:", error);
+    res.json({ loggedIn: false });
+  }
+});
+
 app.post("/ocr", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
@@ -581,6 +777,10 @@ app.post("/ocr", upload.single("image"), async (req, res) => {
 });
 
 app.post("/score", async (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).send("请先登录后再评分。");
+  }
+
   const essay = req.body?.essay;
 
   if (!essay || typeof essay !== "string") {
@@ -608,7 +808,57 @@ app.post("/score", async (req, res) => {
   // 新增：用于判定本次评分是否真正成功返回过有效内容
   let wroteAnyContent = false;
 
+  // 新增：并发安全所需的数据库连接与事务状态
+  let dbClient = null;
+  let txOpen = false;
+  let clientDisconnected = false;
+  let responseEnded = false;
+
+  req.on("aborted", () => {
+    clientDisconnected = true;
+  });
+
+  res.on("close", () => {
+    if (!responseEnded) {
+      clientDisconnected = true;
+    }
+  });
+
   try {
+    dbClient = await pool.connect();
+    await dbClient.query("BEGIN");
+    txOpen = true;
+
+    const lockedUserResult = await dbClient.query(
+      `
+        SELECT id, username, password_hash, free_score_left, last_reset_date
+        FROM users
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [req.session.userId]
+    );
+
+    if (lockedUserResult.rows.length === 0) {
+      await dbClient.query("ROLLBACK");
+      txOpen = false;
+      return res.status(401).send("登录状态失效，请重新登录。");
+    }
+
+    const user = await checkAndResetDaily(dbClient, req.session.userId);
+
+    if (!user) {
+      await dbClient.query("ROLLBACK");
+      txOpen = false;
+      return res.status(401).send("登录状态失效，请重新登录。");
+    }
+
+    if (user.free_score_left <= 0) {
+      await dbClient.query("ROLLBACK");
+      txOpen = false;
+      return res.status(403).send("今日免费次数已用完，明天可继续使用。");
+    }
+
     const cleanedEssay = cleanEssay(trimmedEssay);
     const prompt = buildPrompt(cleanedEssay, wordCount);
 
@@ -649,6 +899,10 @@ app.post("/score", async (req, res) => {
     res.setHeader("Keep-Alive", "timeout=15, max=1000");
 
     for await (const chunk of completion) {
+      if (clientDisconnected || res.destroyed || res.writableEnded) {
+        throw new Error("client disconnected during score stream");
+      }
+
       const content = chunk.choices?.[0]?.delta?.content;
 
       if (content) {
@@ -659,33 +913,76 @@ app.post("/score", async (req, res) => {
       }
     }
 
-    // 新增：评分流结束时写入内部标记，供前端判断是否成功
-    if (wroteAnyContent) {
+    // 只有评分真正成功完成时才扣次数；事务锁会阻塞同一用户的并发评分请求
+    if (wroteAnyContent && !clientDisconnected && !res.destroyed && !res.writableEnded) {
+      await dbClient.query(
+        `
+          UPDATE users
+          SET free_score_left = free_score_left - 1
+          WHERE id = $1
+        `,
+        [req.session.userId]
+      );
+
+      await dbClient.query("COMMIT");
+      txOpen = false;
+
       res.write(`\n${SCORE_STREAM_DONE_MARK}`);
     } else {
-      res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
+      await dbClient.query("ROLLBACK");
+      txOpen = false;
+
+      if (!res.destroyed && !res.writableEnded) {
+        res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
+      }
     }
 
+    responseEnded = true;
     res.end();
   } catch (error) {
     console.error("[SCORE] DeepSeek错误:", error);
 
+    if (txOpen && dbClient) {
+      try {
+        await dbClient.query("ROLLBACK");
+      } catch (_) {}
+      txOpen = false;
+    }
+
     if (!res.headersSent) {
       res.status(500).send("AI评分失败，请检查服务器。");
     } else {
-      try {
-        res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
-      } catch (_) {}
-      try {
-        res.end();
-      } catch (_) {}
+      if (!res.destroyed && !res.writableEnded) {
+        try {
+          res.write(`\n${SCORE_STREAM_INTERRUPTED_MARK}`);
+        } catch (_) {}
+        try {
+          responseEnded = true;
+          res.end();
+        } catch (_) {}
+      }
+    }
+  } finally {
+    if (dbClient) {
+      dbClient.release();
     }
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`publicDir = ${publicDir}`);
-  console.log(`indexPath = ${indexPath}`);
-  console.log(`index exists = ${fs.existsSync(indexPath)}`);
-});
+async function start() {
+  try {
+    await initDB();
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`publicDir = ${publicDir}`);
+      console.log(`indexPath = ${indexPath}`);
+      console.log(`index exists = ${fs.existsSync(indexPath)}`);
+    });
+  } catch (error) {
+    console.error("[BOOT] server start failed:", error);
+    process.exit(1);
+  }
+}
+
+start();

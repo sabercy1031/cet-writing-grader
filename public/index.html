@@ -5,13 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI 四六级作文评分</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
       margin: 0;
@@ -24,17 +19,171 @@
     .container {
       max-width: 920px;
       margin: 0 auto;
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255,255,255,0.92);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(226, 232, 240, 0.9);
+      border: 1px solid rgba(226,232,240,0.9);
       border-radius: 22px;
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 18px 45px rgba(15,23,42,0.08);
       padding: 28px;
     }
 
-    .hero {
-      margin-bottom: 22px;
+    /* ── 顶部用户栏 ── */
+    .user-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-bottom: 18px;
+      min-height: 36px;
     }
+
+    .user-bar-info {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .user-bar-info strong {
+      color: #1f2937;
+    }
+
+    .user-bar-btn {
+      border: 1px solid #dbe2f0;
+      background: #fff;
+      color: #3157d5;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .user-bar-btn:hover {
+      background: #f7faff;
+      border-color: #c9d6ff;
+    }
+
+    /* ── 登录弹窗 ── */
+    .modal-mask {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-mask.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 20px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 24px 60px rgba(15,23,42,0.18);
+      position: relative;
+    }
+
+    .modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 6px;
+    }
+
+    .modal-sub {
+      font-size: 13px;
+      color: #9ca3af;
+      margin: 0 0 22px;
+    }
+
+    .modal-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+
+    .modal-tab {
+      flex: 1;
+      padding: 9px;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      background: #f8fafc;
+      color: #6b7280;
+      transition: all 0.18s ease;
+    }
+
+    .modal-tab.active {
+      background: #4a6cf7;
+      color: #fff;
+    }
+
+    .modal-field {
+      margin-bottom: 14px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .modal-field input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #d7dce5;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #1f2937;
+      background: #fbfcfe;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .modal-field input:focus {
+      border-color: #4a6cf7;
+      box-shadow: 0 0 0 3px rgba(74,108,247,0.12);
+    }
+
+    .modal-error {
+      font-size: 13px;
+      color: #dc2626;
+      margin-bottom: 12px;
+      min-height: 20px;
+    }
+
+    .modal-submit {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(74,108,247,0.22);
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    /* ── Hero ── */
+    .hero { margin-bottom: 22px; }
 
     .hero-badge {
       display: inline-block;
@@ -47,26 +196,11 @@
       margin-bottom: 12px;
     }
 
-    h1 {
-      margin: 0 0 10px;
-      font-size: 32px;
-      line-height: 1.2;
-      color: #111827;
-    }
+    h1 { margin: 0 0 10px; font-size: 32px; line-height: 1.2; color: #111827; }
 
-    .subtitle {
-      margin: 0 0 16px;
-      font-size: 15px;
-      line-height: 1.7;
-      color: #6b7280;
-    }
+    .subtitle { margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #6b7280; }
 
-    .feature-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-    }
+    .feature-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 
     .feature-chip {
       border: 1px solid #d9e3ff;
@@ -80,31 +214,71 @@
       transition: all 0.18s ease;
     }
 
-    .feature-chip:hover {
-      background: #dfe8ff;
-      border-color: #c8d8ff;
-      transform: translateY(-1px);
-    }
+    .feature-chip:hover { background: #dfe8ff; border-color: #c8d8ff; transform: translateY(-1px); }
 
     .feature-chip.card-chip {
-      background: rgba(255, 255, 255, 0.16);
-      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255,255,255,0.16);
+      border-color: rgba(255,255,255,0.22);
       color: #fff;
       backdrop-filter: blur(4px);
     }
 
     .feature-chip.card-chip:hover {
-      background: rgba(255, 255, 255, 0.24);
-      border-color: rgba(255, 255, 255, 0.28);
+      background: rgba(255,255,255,0.24);
+      border-color: rgba(255,255,255,0.28);
     }
 
+    /* ── 未登录遮罩 ── */
+    .login-gate {
+      display: none;
+      margin-top: 22px;
+      padding: 32px 24px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
+      text-align: center;
+    }
+
+    .login-gate.show { display: block; }
+
+    .login-gate-icon { font-size: 36px; margin-bottom: 12px; }
+
+    .login-gate-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 8px;
+    }
+
+    .login-gate-desc {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0 0 20px;
+      line-height: 1.7;
+    }
+
+    .login-gate-btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border: none;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(74,108,247,0.22);
+    }
+
+    /* ── 编辑器卡片 ── */
     .editor-card {
       margin-top: 22px;
       padding: 22px;
       border-radius: 18px;
-      background: #ffffff;
+      background: #fff;
       border: 1px solid #e5e7eb;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
     }
 
     .section-title-row {
@@ -116,45 +290,16 @@
       margin-bottom: 12px;
     }
 
-    .section-title {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 700;
-      color: #111827;
-    }
+    .section-title { margin: 0; font-size: 18px; font-weight: 700; color: #111827; }
 
-    .ocr-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
+    .ocr-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
 
-    .ocr-file {
-      max-width: 280px;
-      font-size: 14px;
-    }
+    .ocr-file { max-width: 280px; font-size: 14px; }
 
-    .ocr-status {
-      font-size: 13px;
-      color: #6b7280;
-      margin: 4px 0 12px;
-      line-height: 1.6;
-    }
-
-    .ocr-status.success {
-      color: #15803d;
-    }
-
-    .ocr-status.error {
-      color: #dc2626;
-    }
-
-    .ocr-status.warning {
-      color: #b45309;
-      font-weight: 600;
-    }
+    .ocr-status { font-size: 13px; color: #6b7280; margin: 4px 0 12px; line-height: 1.6; }
+    .ocr-status.success { color: #15803d; }
+    .ocr-status.error { color: #dc2626; }
+    .ocr-status.warning { color: #b45309; font-weight: 600; }
 
     .system-note {
       margin-top: 10px;
@@ -167,9 +312,7 @@
       color: #6b7280;
     }
 
-    .system-note strong {
-      color: #374151;
-    }
+    .system-note strong { color: #374151; }
 
     textarea {
       width: 100%;
@@ -183,13 +326,13 @@
       color: #1f2937;
       background: #fbfcfe;
       outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     textarea:focus {
       border-color: #4a6cf7;
-      box-shadow: 0 0 0 4px rgba(74, 108, 247, 0.12);
-      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(74,108,247,0.12);
+      background: #fff;
     }
 
     .editor-footer {
@@ -201,25 +344,10 @@
       flex-wrap: wrap;
     }
 
-    .counter-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
+    .counter-wrap { display: flex; flex-direction: column; gap: 5px; }
+    .counter { font-size: 14px; color: #4b5563; font-weight: 600; }
+    .hint { font-size: 13px; color: #9ca3af; line-height: 1.6; }
 
-    .counter {
-      font-size: 14px;
-      color: #4b5563;
-      font-weight: 600;
-    }
-
-    .hint {
-      font-size: 13px;
-      color: #9ca3af;
-      line-height: 1.6;
-    }
-
-    /* 免费次数提示条 */
     .free-score-bar {
       margin-top: 14px;
       padding: 9px 14px;
@@ -227,30 +355,14 @@
       font-size: 13px;
       font-weight: 500;
       line-height: 1.6;
-      color: #6b7280;
       background: #f8fafc;
       border: 1px solid #e5e7eb;
+      color: #6b7280;
       transition: all 0.2s ease;
     }
 
-    .free-score-bar.has-quota {
-      background: #f8fafc;
-      border-color: #e5e7eb;
-      color: #6b7280;
-    }
-
-    .free-score-bar.low-quota {
-      background: #fffbeb;
-      border-color: #fde68a;
-      color: #92400e;
-    }
-
-    .free-score-bar.no-quota {
-      background: #fef2f2;
-      border-color: #fecaca;
-      color: #991b1b;
-      font-weight: 600;
-    }
+    .free-score-bar.low-quota { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .free-score-bar.no-quota { background: #fef2f2; border-color: #fecaca; color: #991b1b; font-weight: 600; }
 
     .primary-btn {
       margin-top: 18px;
@@ -262,31 +374,28 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 10px 24px rgba(74, 108, 247, 0.22);
+      box-shadow: 0 10px 24px rgba(74,108,247,0.22);
       transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     }
 
     .primary-btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 14px 28px rgba(74, 108, 247, 0.28);
+      box-shadow: 0 14px 28px rgba(74,108,247,0.28);
     }
 
     .primary-btn:disabled {
       opacity: 0.72;
       cursor: not-allowed;
       transform: none;
-      box-shadow: 0 8px 18px rgba(74, 108, 247, 0.18);
+      box-shadow: 0 8px 18px rgba(74,108,247,0.18);
     }
 
-    /* 次数用完时按钮特殊样式 */
     .primary-btn.quota-empty {
       background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
-      box-shadow: 0 8px 18px rgba(107, 114, 128, 0.18);
+      box-shadow: 0 8px 18px rgba(107,114,128,0.18);
     }
 
-    #resultWrap {
-      margin-top: 26px;
-    }
+    #resultWrap { margin-top: 26px; }
 
     .raw-stream-box {
       padding: 20px;
@@ -298,56 +407,39 @@
       min-height: 150px;
       word-break: break-word;
       color: #1f2937;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.03);
+      box-shadow: 0 8px 24px rgba(15,23,42,0.03);
     }
 
-    .loading {
-      color: #6b7280;
-    }
+    .loading { color: #6b7280; }
 
-    /* 分数说明文案 */
-    .score-disclaimer {
+    .score-card-disclaimer {
+      position: relative;
+      z-index: 1;
       font-size: 12px;
-      color: #9ca3af;
+      color: rgba(255,255,255,0.65);
       line-height: 1.6;
-      margin-top: 8px;
-      padding: 0 2px;
+      margin-bottom: 14px;
     }
 
-    .result-layout {
-      display: grid;
-      gap: 18px;
-    }
+    .result-layout { display: grid; gap: 18px; }
 
-    .top-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    .top-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 
     .secondary-btn {
       border: 1px solid #dbe2f0;
-      background: #ffffff;
+      background: #fff;
       color: #3157d5;
       padding: 10px 14px;
       border-radius: 12px;
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+      box-shadow: 0 6px 16px rgba(15,23,42,0.04);
       transition: all 0.2s ease;
     }
 
-    .secondary-btn:hover {
-      background: #f7faff;
-      border-color: #c9d6ff;
-    }
-
-    .secondary-btn:disabled {
-      opacity: 0.72;
-      cursor: not-allowed;
-    }
+    .secondary-btn:hover { background: #f7faff; border-color: #c9d6ff; }
+    .secondary-btn:disabled { opacity: 0.72; cursor: not-allowed; }
 
     .score-card {
       position: relative;
@@ -356,7 +448,7 @@
       background: linear-gradient(135deg, #4a6cf7 0%, #3157d5 100%);
       color: #fff;
       padding: 26px 24px;
-      box-shadow: 0 18px 36px rgba(49, 87, 213, 0.22);
+      box-shadow: 0 18px 36px rgba(49,87,213,0.22);
       border: none;
       scroll-margin-top: 20px;
     }
@@ -364,309 +456,172 @@
     .score-card::after {
       content: "";
       position: absolute;
-      right: -30px;
-      top: -30px;
-      width: 140px;
-      height: 140px;
-      background: rgba(255, 255, 255, 0.12);
+      right: -30px; top: -30px;
+      width: 140px; height: 140px;
+      background: rgba(255,255,255,0.12);
       border-radius: 50%;
     }
 
     .score-card .secondary-btn {
-      background: rgba(255, 255, 255, 0.16);
-      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255,255,255,0.16);
+      border-color: rgba(255,255,255,0.22);
       color: #fff;
       box-shadow: none;
     }
 
     .score-card .secondary-btn:hover {
-      background: rgba(255, 255, 255, 0.24);
-      border-color: rgba(255, 255, 255, 0.28);
+      background: rgba(255,255,255,0.24);
+      border-color: rgba(255,255,255,0.28);
     }
 
     .score-value {
-      position: relative;
-      z-index: 1;
-      font-size: 46px;
-      font-weight: 800;
-      line-height: 1;
-      margin-bottom: 12px;
-      letter-spacing: -1px;
-      color: #fff;
+      position: relative; z-index: 1;
+      font-size: 46px; font-weight: 800;
+      line-height: 1; margin-bottom: 12px;
+      letter-spacing: -1px; color: #fff;
     }
 
-    .score-meta {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
+    .score-meta { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
 
     .score-pill {
-      display: inline-flex;
-      align-items: center;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.16);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 700;
+      display: inline-flex; align-items: center;
+      padding: 8px 12px; border-radius: 999px;
+      background: rgba(255,255,255,0.16); color: #fff;
+      font-size: 13px; font-weight: 700;
       backdrop-filter: blur(4px);
     }
 
     .score-desc {
-      position: relative;
-      z-index: 1;
-      font-size: 15px;
-      line-height: 1.7;
-      color: rgba(255, 255, 255, 0.94);
-      margin-bottom: 6px;
+      position: relative; z-index: 1;
+      font-size: 15px; line-height: 1.7;
+      color: rgba(255,255,255,0.94); margin-bottom: 6px;
     }
 
-    /* 分数卡片内说明文字 */
-    .score-card-disclaimer {
-      position: relative;
-      z-index: 1;
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.65);
-      line-height: 1.6;
-      margin-bottom: 14px;
-    }
+    .card-nav { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 
-    .card-nav {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .grid-two {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
+    .grid-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 
     .card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 20px;
-      padding: 22px 20px;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+      background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 20px; padding: 22px 20px;
+      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
       scroll-margin-top: 20px;
     }
 
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .card-header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .card-header-left { display: flex; align-items: center; gap: 10px; }
 
     .card-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      flex-shrink: 0;
+      width: 34px; height: 34px; border-radius: 12px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
     }
 
-    .card-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin: 0;
-      color: #111827;
-    }
+    .card-title { font-size: 18px; font-weight: 700; margin: 0; color: #111827; }
 
-    .good .card-icon {
-      background: #ecfdf3;
-      color: #16a34a;
-    }
+    .good .card-icon { background: #ecfdf3; color: #16a34a; }
+    .bad .card-icon { background: #fef2f2; color: #dc2626; }
+    .suggest .card-icon { background: #fff7ed; color: #ea580c; }
+    .sentence .card-icon { background: #eff6ff; color: #2563eb; }
+    .essay-card .card-icon { background: #f5f3ff; color: #7c3aed; }
+    .fallback .card-icon { background: #f3f4f6; color: #4b5563; }
 
-    .bad .card-icon {
-      background: #fef2f2;
-      color: #dc2626;
-    }
+    .list { margin: 0; padding-left: 22px; color: #374151; line-height: 1.95; }
+    .list li + li { margin-top: 8px; }
 
-    .suggest .card-icon {
-      background: #fff7ed;
-      color: #ea580c;
-    }
+    .essay-text { margin: 0; white-space: pre-wrap; line-height: 2; color: #374151; word-break: break-word; }
 
-    .sentence .card-icon {
-      background: #eff6ff;
-      color: #2563eb;
-    }
-
-    .essay-card .card-icon {
-      background: #f5f3ff;
-      color: #7c3aed;
-    }
-
-    .fallback .card-icon {
-      background: #f3f4f6;
-      color: #4b5563;
-    }
-
-    .list {
-      margin: 0;
-      padding-left: 22px;
-      color: #374151;
-      line-height: 1.95;
-    }
-
-    .list li + li {
-      margin-top: 8px;
-    }
-
-    .essay-text {
-      margin: 0;
-      white-space: pre-wrap;
-      line-height: 2;
-      color: #374151;
-      word-break: break-word;
-    }
-
-    .essay-preview {
-      position: relative;
-      overflow: hidden;
-      max-height: none;
-      transition: max-height 0.3s ease;
-    }
-
-    .essay-preview.collapsed {
-      max-height: 230px;
-    }
-
+    .essay-preview { position: relative; overflow: hidden; max-height: none; transition: max-height 0.3s ease; }
+    .essay-preview.collapsed { max-height: 230px; }
     .essay-preview.collapsed::after {
       content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 80px;
+      position: absolute; left: 0; right: 0; bottom: 0; height: 80px;
       background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
       pointer-events: none;
     }
 
     .toggle-btn {
-      border: none;
-      background: #f3f6ff;
-      color: #3157d5;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.2s ease;
+      border: none; background: #f3f6ff; color: #3157d5;
+      padding: 8px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: background 0.2s ease;
     }
 
-    .toggle-btn:hover {
-      background: #e8efff;
-    }
+    .toggle-btn:hover { background: #e8efff; }
 
     #scrollToBottomBtn {
-      position: fixed;
-      right: 22px;
-      bottom: 22px;
-      display: none;
-      padding: 11px 16px;
-      border: none;
-      border-radius: 999px;
+      position: fixed; right: 22px; bottom: 22px; display: none;
+      padding: 11px 16px; border: none; border-radius: 999px;
       background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(74, 108, 247, 0.28);
-      z-index: 999;
+      color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 10px 24px rgba(74,108,247,0.28); z-index: 999;
     }
 
-    #scrollToBottomBtn:hover {
-      filter: brightness(0.96);
-    }
+    #scrollToBottomBtn:hover { filter: brightness(0.96); }
 
     .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 28px;
+      position: fixed; left: 50%; bottom: 28px;
       transform: translateX(-50%);
-      background: rgba(17, 24, 39, 0.92);
-      color: #fff;
-      padding: 11px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-      z-index: 1001;
+      background: rgba(17,24,39,0.92); color: #fff;
+      padding: 11px 16px; border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease; z-index: 1001;
     }
 
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(-4px);
-    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
 
     @media (max-width: 760px) {
-      body {
-        padding: 18px 12px 72px;
-      }
-
-      .container {
-        padding: 18px;
-        border-radius: 18px;
-      }
-
-      h1 {
-        font-size: 26px;
-      }
-
-      .grid-two {
-        grid-template-columns: 1fr;
-      }
-
-      .score-value {
-        font-size: 40px;
-      }
-
-      .editor-card,
-      .card,
-      .score-card {
-        padding: 18px;
-      }
-
-      .ocr-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .ocr-file {
-        max-width: 100%;
-      }
-
-      #scrollToBottomBtn {
-        right: 14px;
-        bottom: 14px;
-      }
+      body { padding: 18px 12px 72px; }
+      .container { padding: 18px; border-radius: 18px; }
+      h1 { font-size: 26px; }
+      .grid-two { grid-template-columns: 1fr; }
+      .score-value { font-size: 40px; }
+      .editor-card, .card, .score-card { padding: 18px; }
+      .ocr-toolbar { flex-direction: column; align-items: stretch; }
+      .ocr-file { max-width: 100%; }
+      #scrollToBottomBtn { right: 14px; bottom: 14px; }
+      .modal { margin: 16px; }
     }
   </style>
 </head>
 <body>
+
+  <!-- 登录弹窗 -->
+  <div class="modal-mask" id="modalMask">
+    <div class="modal">
+      <div class="modal-title">欢迎使用</div>
+      <div class="modal-sub">AI 四六级作文评分 · 登录后开始体验</div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tabLogin" onclick="switchTab('login')">登录</button>
+        <button class="modal-tab" id="tabRegister" onclick="switchTab('register')">注册</button>
+      </div>
+
+      <div class="modal-field">
+        <label>用户名</label>
+        <input type="text" id="inputUsername" placeholder="请输入用户名" autocomplete="username" />
+      </div>
+
+      <div class="modal-field">
+        <label>密码</label>
+        <input type="password" id="inputPassword" placeholder="请输入密码" autocomplete="current-password" />
+      </div>
+
+      <div class="modal-error" id="modalError"></div>
+
+      <button class="modal-submit" id="modalSubmit" onclick="handleAuth()">登录</button>
+    </div>
+  </div>
+
   <div class="container">
+
+    <!-- 顶部用户栏 -->
+    <div class="user-bar" id="userBar">
+      <span class="user-bar-info" id="userBarInfo"></span>
+      <button class="user-bar-btn" id="userBarBtn" onclick="handleLogout()">退出登录</button>
+    </div>
+
     <div class="hero">
       <div class="hero-badge">AI 写作批改 · 四六级作文</div>
       <h1>AI 四六级作文评分</h1>
@@ -682,7 +637,16 @@
       </div>
     </div>
 
-    <div class="editor-card">
+    <!-- 未登录提示 -->
+    <div class="login-gate" id="loginGate">
+      <div class="login-gate-icon">🔒</div>
+      <div class="login-gate-title">请先登录</div>
+      <div class="login-gate-desc">登录后即可免费体验 AI 作文批改<br>新用户每天可免费评分 3 次</div>
+      <button class="login-gate-btn" onclick="showModal()">立即登录 / 注册</button>
+    </div>
+
+    <!-- 编辑器（登录后显示） -->
+    <div class="editor-card" id="editorCard" style="display:none;">
       <div class="section-title-row">
         <h2 class="section-title">输入作文</h2>
         <button id="resetBtn" class="secondary-btn" type="button">重新开始 / 新作文</button>
@@ -710,7 +674,7 @@
         </div>
       </div>
 
-      <div id="freeScoreBar" class="free-score-bar has-quota"></div>
+      <div id="freeScoreBar" class="free-score-bar"></div>
 
       <button id="btn" class="primary-btn">开始评分</button>
     </div>
@@ -724,7 +688,7 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // 成功判定标记
+    // ── 成功判定标记 ─────────────────────────────────────────
     const SCORE_STREAM_DONE_MARK = "[[SCORE_STREAM_DONE]]";
     const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
 
@@ -735,81 +699,27 @@
         .trim();
     }
 
-    // 免费次数
-    const FREE_SCORE_LIMIT = 3;
-    const FREE_SCORE_STORAGE_KEY = "cet_free_score_left";
+    // ── 全局用户状态 ─────────────────────────────────────────
+    let currentUser = null; // { username, freeScoreLeft }
 
-    function getFreeScoreLeft() {
-      const val = localStorage.getItem(FREE_SCORE_STORAGE_KEY);
-      if (val === null) {
-        localStorage.setItem(FREE_SCORE_STORAGE_KEY, String(FREE_SCORE_LIMIT));
-        return FREE_SCORE_LIMIT;
-      }
-      const num = parseInt(val, 10);
-      return isNaN(num) ? FREE_SCORE_LIMIT : Math.max(0, num);
-    }
-
-    function setFreeScoreLeft(value) {
-      localStorage.setItem(FREE_SCORE_STORAGE_KEY, String(Math.max(0, value)));
-    }
-
-    function decreaseFreeScore() {
-      const current = getFreeScoreLeft();
-      if (current > 0) setFreeScoreLeft(current - 1);
-    }
-
-    // ── 优化：updateFreeScoreBar 同时控制按钮禁用状态 ────────────
-    function updateFreeScoreBar() {
-      const left = getFreeScoreLeft();
-      const bar = document.getElementById("freeScoreBar");
-      if (!bar) return;
-
-      if (left <= 0) {
-        bar.className = "free-score-bar no-quota";
-        bar.textContent = "免费次数已用完，如需继续评分请稍后再来";
-        // 次数用完：禁用按钮
-        if (!isLoading) {
-          button.disabled = true;
-          button.classList.add("quota-empty");
-          button.innerText = "免费次数已用完";
-        }
-      } else if (left === 1) {
-        bar.className = "free-score-bar low-quota";
-        bar.textContent = `剩余免费评分次数：${left} 次（最后一次机会）`;
-        if (!isLoading) {
-          button.disabled = false;
-          button.classList.remove("quota-empty");
-        }
-      } else {
-        bar.className = "free-score-bar has-quota";
-        bar.textContent = `剩余免费评分次数：${left} 次`;
-        if (!isLoading) {
-          button.disabled = false;
-          button.classList.remove("quota-empty");
-        }
-      }
-    }
-    // ────────────────────────────────────────────────────────────
-
-    // ── 新增：清理高分范文末尾偶发的 Word count 说明 ─────────────
-    function cleanEssayText(text) {
-      if (!text) return text;
-      return text
-        .replace(/\s*\(?\s*[Ww]ord\s+[Cc]ount\s*[:：]?\s*\d+\s*\)?\s*$/m, "")
-        .trim();
-    }
-    // ────────────────────────────────────────────────────────────
-
-    const textarea = document.getElementById("essay");
-    const result = document.getElementById("result");
-    const button = document.getElementById("btn");
-    const counter = document.getElementById("counter");
+    // ── DOM 引用 ─────────────────────────────────────────────
+    const textarea       = document.getElementById("essay");
+    const result         = document.getElementById("result");
+    const button         = document.getElementById("btn");
+    const counter        = document.getElementById("counter");
     const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
-    const toast = document.getElementById("toast");
-    const imageUpload = document.getElementById("imageUpload");
-    const ocrBtn = document.getElementById("ocrBtn");
-    const ocrStatus = document.getElementById("ocrStatus");
-    const resetBtn = document.getElementById("resetBtn");
+    const toast          = document.getElementById("toast");
+    const imageUpload    = document.getElementById("imageUpload");
+    const ocrBtn         = document.getElementById("ocrBtn");
+    const ocrStatus      = document.getElementById("ocrStatus");
+    const resetBtn       = document.getElementById("resetBtn");
+    const freeScoreBar   = document.getElementById("freeScoreBar");
+    const editorCard     = document.getElementById("editorCard");
+    const loginGate      = document.getElementById("loginGate");
+    const userBar        = document.getElementById("userBar");
+    const userBarInfo    = document.getElementById("userBarInfo");
+    const userBarBtn     = document.getElementById("userBarBtn");
+    const modalMask      = document.getElementById("modalMask");
 
     let autoFollow = true;
     let isStreaming = false;
@@ -822,6 +732,7 @@
     let isOcrLoading = false;
     let ocrNeedsReview = false;
     let isApplyingOcrResult = false;
+    let currentTab = "login";
 
     let scoreAbortController = null;
     let ocrAbortController = null;
@@ -829,6 +740,152 @@
     let activeOcrRequestId = 0;
 
     const defaultOcrStatusText = "建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。";
+
+    // ── 登录弹窗控制 ─────────────────────────────────────────
+
+    function showModal() {
+      modalMask.classList.add("show");
+      document.getElementById("inputUsername").focus();
+    }
+
+    function hideModal() {
+      modalMask.classList.remove("show");
+      document.getElementById("modalError").textContent = "";
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById("tabLogin").classList.toggle("active", tab === "login");
+      document.getElementById("tabRegister").classList.toggle("active", tab === "register");
+      document.getElementById("modalSubmit").textContent = tab === "login" ? "登录" : "注册";
+      document.getElementById("modalError").textContent = "";
+      document.getElementById("inputPassword").autocomplete = tab === "login" ? "current-password" : "new-password";
+    }
+
+    async function handleAuth() {
+      const username = document.getElementById("inputUsername").value.trim();
+      const password = document.getElementById("inputPassword").value;
+      const errEl    = document.getElementById("modalError");
+      const submitBtn = document.getElementById("modalSubmit");
+
+      if (!username || !password) {
+        errEl.textContent = "请填写用户名和密码";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = currentTab === "login" ? "登录中..." : "注册中...";
+      errEl.textContent = "";
+
+      try {
+        const endpoint = currentTab === "login" ? "/api/login" : "/api/register";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errEl.textContent = data.error || "操作失败，请稍后再试";
+          return;
+        }
+
+        currentUser = { username: data.username, freeScoreLeft: data.freeScoreLeft };
+        hideModal();
+        renderLoggedIn();
+      } catch {
+        errEl.textContent = "网络错误，请稍后再试";
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = currentTab === "login" ? "登录" : "注册";
+      }
+    }
+
+    // 支持回车提交
+    document.getElementById("inputPassword").addEventListener("keydown", e => {
+      if (e.key === "Enter") handleAuth();
+    });
+    document.getElementById("inputUsername").addEventListener("keydown", e => {
+      if (e.key === "Enter") handleAuth();
+    });
+
+    // ── 登录/登出状态渲染 ────────────────────────────────────
+
+    function renderLoggedIn() {
+      loginGate.classList.remove("show");
+      editorCard.style.display = "block";
+      userBarInfo.innerHTML = `你好，<strong>${escapeHtml(currentUser.username)}</strong>`;
+      userBarBtn.style.display = "inline-block";
+      updateFreeScoreBar();
+    }
+
+    function renderLoggedOut() {
+      loginGate.classList.add("show");
+      editorCard.style.display = "none";
+      userBarInfo.textContent = "";
+      userBarBtn.style.display = "none";
+      result.innerHTML = "";
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch("/api/logout", { method: "POST" });
+      } catch (_) {}
+      currentUser = null;
+      renderLoggedOut();
+      showToast("已退出登录");
+    }
+
+    // ── 免费次数显示（从服务器数据） ────────────────────────
+
+    function updateFreeScoreBar() {
+      if (!currentUser) return;
+      const left = currentUser.freeScoreLeft;
+
+      if (left <= 0) {
+        freeScoreBar.className = "free-score-bar no-quota";
+        freeScoreBar.textContent = "今日免费次数已用完，明天可继续使用";
+        button.disabled = true;
+        button.classList.add("quota-empty");
+        button.innerText = "今日次数已用完";
+      } else if (left === 1) {
+        freeScoreBar.className = "free-score-bar low-quota";
+        freeScoreBar.textContent = `剩余免费评分次数：${left} 次（今日最后一次）`;
+        if (!isLoading) {
+          button.disabled = false;
+          button.classList.remove("quota-empty");
+        }
+      } else {
+        freeScoreBar.className = "free-score-bar";
+        freeScoreBar.textContent = `剩余免费评分次数：${left} 次`;
+        if (!isLoading) {
+          button.disabled = false;
+          button.classList.remove("quota-empty");
+        }
+      }
+    }
+
+    // ── 页面初始化：检查登录态 ───────────────────────────────
+
+    async function initPage() {
+      try {
+        const res = await fetch("/api/me");
+        const data = await res.json();
+        if (data.loggedIn) {
+          currentUser = { username: data.username, freeScoreLeft: data.freeScoreLeft };
+          renderLoggedIn();
+        } else {
+          renderLoggedOut();
+          showModal();
+        }
+      } catch {
+        renderLoggedOut();
+        showModal();
+      }
+    }
+
+    // ── 工具函数 ─────────────────────────────────────────────
 
     function getPageHeight() {
       return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
@@ -849,11 +906,7 @@
     }
 
     function updateScrollButton() {
-      if (!pageNearBottom() && hasResultContent()) {
-        scrollToBottomBtn.style.display = "block";
-      } else {
-        scrollToBottomBtn.style.display = "none";
-      }
+      scrollToBottomBtn.style.display = (!pageNearBottom() && hasResultContent()) ? "block" : "none";
     }
 
     function showToast(message) {
@@ -875,28 +928,29 @@
 
     function escapeHtml(str) {
       return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function cleanEssayText(text) {
+      if (!text) return text;
+      return text.replace(/\s*\(?\s*[Ww]ord\s+[Cc]ount\s*[:：]?\s*\d+\s*\)?\s*$/m, "").trim();
     }
 
     function normalizeAiText(text) {
-      let normalized = String(text || "").replace(/\r/g, "").trim();
-      normalized = normalized
+      let n = String(text || "").replace(/\r/g, "").trim();
+      n = n
         .replace(/^\s{0,3}#{1,6}\s*/gm, "")
         .replace(/^\s*[-*]\s+(?=【)/gm, "")
         .replace(/^\s*\d+\.\s+(?=【)/gm, "")
         .replace(/\*\*\s*(【[^】]+】)\s*\*\*/g, "$1")
         .replace(/\*\s*(【[^】]+】)\s*\*/g, "$1")
         .replace(/`(【[^】]+】)`/g, "$1");
-      return normalized.trim();
+      return n.trim();
     }
 
     function findSectionStart(text, title) {
-      const patterns = [`\n${title}\n`, `\n${title}`, `${title}\n`, `${title}`];
-      for (const pattern of patterns) {
+      for (const pattern of [`\n${title}\n`, `\n${title}`, `${title}\n`, `${title}`]) {
         const index = text.indexOf(pattern);
         if (index !== -1) return index + pattern.indexOf(title);
       }
@@ -912,10 +966,8 @@
         if (nextTitle === title) continue;
         const nextStart = findSectionStart(text.slice(contentStart), nextTitle);
         if (nextStart !== -1) {
-          const absoluteNextStart = contentStart + nextStart;
-          if (absoluteNextStart > start && absoluteNextStart < end) {
-            end = absoluteNextStart;
-          }
+          const abs = contentStart + nextStart;
+          if (abs > start && abs < end) end = abs;
         }
       }
       return text.slice(contentStart, end).trim();
@@ -923,17 +975,14 @@
 
     function sectionToList(sectionText) {
       if (!sectionText) return [];
-      const normalized = sectionText
-        .replace(/\r/g, "")
-        .replace(/^\s*[-•]\s*/gm, "1. ");
+      const normalized = sectionText.replace(/\r/g, "").replace(/^\s*[-•]\s*/gm, "1. ");
       const parts = normalized
         .split(/\n(?=\s*(?:\d+[\.、]|[-•]))/)
-        .map(item => item.trim())
-        .filter(Boolean)
-        .map(item => item.replace(/^\s*(\d+[\.、]|[-•])\s*/, "").trim())
+        .map(i => i.trim()).filter(Boolean)
+        .map(i => i.replace(/^\s*(\d+[\.、]|[-•])\s*/, "").trim())
         .filter(Boolean);
       if (parts.length > 0) return parts;
-      return normalized.split("\n").map(item => item.trim()).filter(Boolean);
+      return normalized.split("\n").map(i => i.trim()).filter(Boolean);
     }
 
     function getLevelInfo(score) {
@@ -956,42 +1005,33 @@
     function parseStructuredResult(text) {
       const cleanText = normalizeAiText(text);
       const titles = ["【预测分数】","【优点】","【问题】","【修改建议】","【参考修改句】","【高分范文】"];
-
-      const scoreText          = extractSectionByTitles(cleanText, "【预测分数】", titles);
-      const advantagesText     = extractSectionByTitles(cleanText, "【优点】", titles);
-      const problemsText       = extractSectionByTitles(cleanText, "【问题】", titles);
-      const suggestionsText    = extractSectionByTitles(cleanText, "【修改建议】", titles);
-      const revisedSentencesText = extractSectionByTitles(cleanText, "【参考修改句】", titles);
-      const highScoreEssayText = extractSectionByTitles(cleanText, "【高分范文】", titles);
-
+      const scoreText           = extractSectionByTitles(cleanText, "【预测分数】", titles);
+      const advantagesText      = extractSectionByTitles(cleanText, "【优点】", titles);
+      const problemsText        = extractSectionByTitles(cleanText, "【问题】", titles);
+      const suggestionsText     = extractSectionByTitles(cleanText, "【修改建议】", titles);
+      const revisedSentencesText= extractSectionByTitles(cleanText, "【参考修改句】", titles);
+      const highScoreEssayText  = extractSectionByTitles(cleanText, "【高分范文】", titles);
       const scoreValue  = extractScoreValue(scoreText, cleanText);
       const scoreNumber = scoreValue ? Number(scoreValue) : null;
       const levelInfo   = scoreNumber !== null ? getLevelInfo(scoreNumber) : null;
-
       return {
         normalizedRaw: cleanText,
         scoreRaw: scoreText || "",
-        scoreValue,
-        scoreNumber,
+        scoreValue, scoreNumber,
         level:   levelInfo ? levelInfo.level   : "",
         surpass: levelInfo ? levelInfo.surpass  : "",
         advantages:       sectionToList(advantagesText),
         problems:         sectionToList(problemsText),
         suggestions:      sectionToList(suggestionsText),
         revisedSentences: sectionToList(revisedSentencesText),
-        // ── 优化：渲染前清理 Word count 尾巴 ──
-        highScoreEssay: cleanEssayText(highScoreEssayText.trim())
+        highScoreEssay:   cleanEssayText(highScoreEssayText.trim())
       };
     }
 
     function shouldFallback(parsed) {
       const coreCount = [
-        !!parsed.scoreValue,
-        parsed.advantages.length > 0,
-        parsed.problems.length > 0,
-        parsed.suggestions.length > 0,
-        parsed.revisedSentences.length > 0,
-        !!parsed.highScoreEssay
+        !!parsed.scoreValue, parsed.advantages.length > 0, parsed.problems.length > 0,
+        parsed.suggestions.length > 0, parsed.revisedSentences.length > 0, !!parsed.highScoreEssay
       ].filter(Boolean).length;
       if (!parsed.scoreValue) return true;
       if (!parsed.suggestions.length) return true;
@@ -1013,23 +1053,18 @@
         ? `预测分数\n${parsed.scoreValue} / 15\n评价等级：${parsed.level}\n估算超越：${parsed.surpass}% 的考生`
         : `预测分数\n${parsed.scoreRaw || "未识别"}`;
       sectionCopyMap = {
-        copyFull:        rawText,
-        copyScore:       scoreText,
+        copyFull: rawText, copyScore: scoreText,
         copyAdvantages:  listToText("优点", parsed.advantages),
         copyProblems:    listToText("问题", parsed.problems),
         copySuggestions: listToText("修改建议", parsed.suggestions),
         copySentences:   listToText("参考修改句", parsed.revisedSentences),
-        copyEssay:       parsed.highScoreEssay ? `高分范文\n${parsed.highScoreEssay}` : "高分范文\n暂无内容"
+        copyEssay: parsed.highScoreEssay ? `高分范文\n${parsed.highScoreEssay}` : "高分范文\n暂无内容"
       };
     }
 
     async function copyText(text) {
-      try {
-        await navigator.clipboard.writeText(text);
-        showToast("复制成功");
-      } catch {
-        showToast("复制失败，请稍后重试");
-      }
+      try { await navigator.clipboard.writeText(text); showToast("复制成功"); }
+      catch { showToast("复制失败，请稍后重试"); }
     }
 
     function jumpToSection(targetId) {
@@ -1052,18 +1087,13 @@
 
     function bindEssayToggle(canToggle) {
       if (!canToggle) return;
-      const toggleEssayBtn = document.getElementById("toggleEssayBtn");
-      const essayPreview   = document.getElementById("essayPreview");
-      if (!toggleEssayBtn || !essayPreview) return;
-      toggleEssayBtn.onclick = () => {
+      const toggleBtn  = document.getElementById("toggleEssayBtn");
+      const essayPreview = document.getElementById("essayPreview");
+      if (!toggleBtn || !essayPreview) return;
+      toggleBtn.onclick = () => {
         isEssayExpanded = !isEssayExpanded;
-        if (isEssayExpanded) {
-          essayPreview.classList.remove("collapsed");
-          toggleEssayBtn.textContent = "收起范文";
-        } else {
-          essayPreview.classList.add("collapsed");
-          toggleEssayBtn.textContent = "展开全文";
-        }
+        essayPreview.classList.toggle("collapsed", !isEssayExpanded);
+        toggleBtn.textContent = isEssayExpanded ? "收起范文" : "展开全文";
       };
     }
 
@@ -1104,7 +1134,6 @@
           <div class="top-actions">
             <button class="secondary-btn" data-copy-key="copyFull">复制全部批改结果</button>
           </div>
-
           <div class="score-card" id="scoreSection">
             <div class="card-header">
               <div class="card-header-left">
@@ -1129,59 +1158,39 @@
               <button class="feature-chip card-chip" data-target="essaySection">高分范文</button>
             </div>
           </div>
-
           <div class="grid-two">
             <div class="card good" id="advantagesSection">
               <div class="card-header">
-                <div class="card-header-left">
-                  <div class="card-icon">✅</div>
-                  <h3 class="card-title">优点</h3>
-                </div>
+                <div class="card-header-left"><div class="card-icon">✅</div><h3 class="card-title">优点</h3></div>
                 <button class="secondary-btn" data-copy-key="copyAdvantages">复制本区</button>
               </div>
               ${parsed.advantages.length ? `<ol class="list">${renderList(parsed.advantages)}</ol>` : `<p class="essay-text">本次未解析到该部分内容。</p>`}
             </div>
-
             <div class="card bad" id="problemsSection">
               <div class="card-header">
-                <div class="card-header-left">
-                  <div class="card-icon">❌</div>
-                  <h3 class="card-title">问题</h3>
-                </div>
+                <div class="card-header-left"><div class="card-icon">❌</div><h3 class="card-title">问题</h3></div>
                 <button class="secondary-btn" data-copy-key="copyProblems">复制本区</button>
               </div>
               ${parsed.problems.length ? `<ol class="list">${renderList(parsed.problems)}</ol>` : `<p class="essay-text">本次未解析到该部分内容。</p>`}
             </div>
           </div>
-
           <div class="card suggest" id="suggestionsSection">
             <div class="card-header">
-              <div class="card-header-left">
-                <div class="card-icon">💡</div>
-                <h3 class="card-title">修改建议</h3>
-              </div>
+              <div class="card-header-left"><div class="card-icon">💡</div><h3 class="card-title">修改建议</h3></div>
               <button class="secondary-btn" data-copy-key="copySuggestions">复制本区</button>
             </div>
             ${parsed.suggestions.length ? `<ol class="list">${renderList(parsed.suggestions)}</ol>` : `<p class="essay-text">本次未解析到该部分内容。</p>`}
           </div>
-
           <div class="card sentence" id="sentencesSection">
             <div class="card-header">
-              <div class="card-header-left">
-                <div class="card-icon">✏️</div>
-                <h3 class="card-title">参考修改句</h3>
-              </div>
+              <div class="card-header-left"><div class="card-icon">✏️</div><h3 class="card-title">参考修改句</h3></div>
               <button class="secondary-btn" data-copy-key="copySentences">复制本区</button>
             </div>
             ${parsed.revisedSentences.length ? `<ol class="list">${renderList(parsed.revisedSentences)}</ol>` : `<p class="essay-text">本次未解析到该部分内容。</p>`}
           </div>
-
           <div class="card essay-card" id="essaySection">
             <div class="card-header">
-              <div class="card-header-left">
-                <div class="card-icon">📘</div>
-                <h3 class="card-title">高分范文</h3>
-              </div>
+              <div class="card-header-left"><div class="card-icon">📘</div><h3 class="card-title">高分范文</h3></div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="secondary-btn" data-copy-key="copyEssay">复制本区</button>
                 ${essayIsLong ? `<button class="toggle-btn" id="toggleEssayBtn">${isEssayExpanded ? "收起范文" : "展开全文"}</button>` : ""}
@@ -1223,34 +1232,18 @@
 
     function resetEditorState(options = {}) {
       const {
-        clearTextarea    = true,
-        clearResult      = true,
-        resetButtonText  = true,
-        resetOcr         = true,
-        scrollToTop      = false,
-        abortRunningTasks = true
+        clearTextarea = true, clearResult = true,
+        resetButtonText = true, resetOcr = true,
+        scrollToTop = false, abortRunningTasks = true
       } = options;
 
-      if (abortRunningTasks) {
-        abortActiveScoreRequest();
-        abortActiveOcrRequest();
-      }
+      if (abortRunningTasks) { abortActiveScoreRequest(); abortActiveOcrRequest(); }
       if (clearTextarea) textarea.value = "";
       if (clearResult)   result.innerHTML = "";
       if (resetButtonText) {
         ocrBtn.disabled = false;
         ocrBtn.textContent = "图片识别";
-        // 按钮文案根据次数决定
-        const left = getFreeScoreLeft();
-        if (left <= 0) {
-          button.disabled = true;
-          button.classList.add("quota-empty");
-          button.innerText = "免费次数已用完";
-        } else {
-          button.disabled = false;
-          button.classList.remove("quota-empty");
-          button.innerText = "开始评分";
-        }
+        updateFreeScoreBar();
       }
       if (resetOcr) {
         ocrNeedsReview = false;
@@ -1292,9 +1285,9 @@
     });
 
     resetBtn.addEventListener("click", () => {
-      const hasText  = textarea.value.trim().length > 0;
+      const hasText   = textarea.value.trim().length > 0;
       const hasResult = hasResultContent();
-      const isBusy   = isLoading || isOcrLoading;
+      const isBusy    = isLoading || isOcrLoading;
 
       let message = `确定要重新开始吗？当前输入内容和本次评分结果将被清空。`;
       if (isBusy) message = `当前任务仍在进行中。点击"确定"会立即停止当前识别/评分，并清空输入内容和结果。`;
@@ -1310,7 +1303,7 @@
     ocrBtn.onclick = async () => {
       if (isOcrLoading || isLoading) return;
       const file = imageUpload.files[0];
-      if (!file)                        { alert("请先选择图片"); return; }
+      if (!file) { alert("请先选择图片"); return; }
       if (!file.type.startsWith("image/")) { alert("请选择图片文件"); return; }
       if (file.size > 8 * 1024 * 1024) { alert("图片不能超过 8MB"); return; }
 
@@ -1375,21 +1368,16 @@
 
     bindJumpButtons();
     updateWordCounter();
-    updateFreeScoreBar();
 
     button.onclick = async () => {
       if (isLoading || isOcrLoading) return;
-
-      // 次数检查
-      const freeLeft = getFreeScoreLeft();
-      if (freeLeft <= 0) {
-        alert("免费次数已用完，暂时无法继续评分");
+      if (!currentUser || currentUser.freeScoreLeft <= 0) {
+        alert("今日免费次数已用完，明天可继续使用");
         return;
       }
 
       const essay     = textarea.value.trim();
       const wordCount = countWords(essay);
-
       if (wordCount < 30) { alert("作文词数过少，请至少输入 30 个词后再评分。"); return; }
 
       if (ocrNeedsReview) {
@@ -1398,12 +1386,8 @@
       }
 
       const confirmScore = confirm(
-        `开始评分前，请确认：\n\n` +
-        `1. 这已经是你准备提交的版本\n` +
-        `2. 你已检查明显拼写或识别错误\n` +
-        `3. 当前词数：${wordCount} 词\n\n` +
-        `说明：系统评分前可能会做轻微格式整理，但不会替你纠正语法、拼写或润色表达。\n\n` +
-        `确认开始评分吗？`
+        `开始评分前，请确认：\n\n1. 这已经是你准备提交的版本\n2. 你已检查明显拼写或识别错误\n3. 当前词数：${wordCount} 词\n\n` +
+        `说明：系统评分前可能会做轻微格式整理，但不会替你纠正语法、拼写或润色表达。\n\n确认开始评分吗？`
       );
       if (!confirmScore) return;
 
@@ -1439,9 +1423,7 @@
 
         if (thisScoreRequestId !== activeScoreRequestId) return;
 
-        // ── 统一失败文案 ──
         if (!response.ok) {
-          const errText = await response.text();
           if (thisScoreRequestId !== activeScoreRequestId) return;
           result.innerHTML = `<div class="raw-stream-box">评分失败，请检查网络或稍后再试</div>`;
           return;
@@ -1452,7 +1434,6 @@
           result.innerHTML = `<div class="raw-stream-box">评分失败，请检查网络或稍后再试</div>`;
           return;
         }
-        // ─────────────────
 
         result.innerHTML = `<div class="raw-stream-box" id="rawStreamBox"></div>`;
         const rawStreamBox = document.getElementById("rawStreamBox");
@@ -1468,7 +1449,6 @@
             return;
           }
           if (done) break;
-
           const text = decoder.decode(value, { stream: true });
           if (text) {
             rawResultText += text;
@@ -1484,15 +1464,17 @@
 
         if (thisScoreRequestId !== activeScoreRequestId) return;
 
-        const isSuccess  = rawResultText.includes(SCORE_STREAM_DONE_MARK);
+        const isSuccess   = rawResultText.includes(SCORE_STREAM_DONE_MARK);
         const cleanedText = removeStreamMarks(rawResultText);
 
         if (isSuccess && cleanedText) {
           renderStructuredResult(cleanedText);
           hasSuccess = true;
           ocrNeedsReview = false;
-          // 成功后扣次数，刷新提示条和按钮状态
-          decreaseFreeScore();
+          // 评分成功后更新本地次数显示（真实次数已由服务器扣减）
+          if (currentUser && currentUser.freeScoreLeft > 0) {
+            currentUser.freeScoreLeft -= 1;
+          }
           updateFreeScoreBar();
           scrollPageToBottom(false, false);
         } else {
@@ -1512,12 +1494,11 @@
           scoreAbortController = null;
           autoFollow = pageNearBottom();
           updateScrollButton();
-          // finally 里统一刷新按钮状态
-          const remaining = getFreeScoreLeft();
-          if (remaining <= 0) {
+          // finally 统一刷新按钮
+          if (!currentUser || currentUser.freeScoreLeft <= 0) {
             button.disabled = true;
             button.classList.add("quota-empty");
-            button.innerText = "免费次数已用完";
+            button.innerText = "今日次数已用完";
           } else {
             button.disabled = false;
             button.classList.remove("quota-empty");
@@ -1526,6 +1507,9 @@
         }
       }
     };
+
+    // 启动
+    initPage();
   </script>
 </body>
 </html>
