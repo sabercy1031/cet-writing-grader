@@ -27,7 +27,6 @@
       padding: 28px;
     }
 
-    /* ── 顶部用户栏 ── */
     .user-bar {
       display: flex;
       align-items: center;
@@ -63,7 +62,6 @@
       border-color: #c9d6ff;
     }
 
-    /* ── 登录弹窗 ── */
     .modal-mask {
       display: none;
       position: fixed;
@@ -182,7 +180,6 @@
       cursor: not-allowed;
     }
 
-    /* ── Hero ── */
     .hero { margin-bottom: 22px; }
 
     .hero-badge {
@@ -228,7 +225,6 @@
       border-color: rgba(255,255,255,0.28);
     }
 
-    /* ── 未登录遮罩 ── */
     .login-gate {
       display: none;
       margin-top: 22px;
@@ -271,7 +267,6 @@
       box-shadow: 0 8px 20px rgba(74,108,247,0.22);
     }
 
-    /* ── 编辑器卡片 ── */
     .editor-card {
       margin-top: 22px;
       padding: 22px;
@@ -1243,6 +1238,11 @@
       if (resetButtonText) {
         ocrBtn.disabled = false;
         ocrBtn.textContent = "图片识别";
+        // ── BUG FIX: 无条件先重置按钮 UI 状态，再让 updateFreeScoreBar 按配额决定最终样式 ──
+        // 修复"重新开始"后按钮仍显示"AI评分中..."且保持 disabled 的问题
+        button.disabled = false;
+        button.classList.remove("quota-empty");
+        button.innerText = "开始评分";
         updateFreeScoreBar();
       }
       if (resetOcr) {
