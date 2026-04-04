@@ -18,6 +18,28 @@ const indexPath = path.resolve(publicDir, "index.html");
 const SCORE_STREAM_DONE_MARK = "[[SCORE_STREAM_DONE]]";
 const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
 
+function removeStreamMarks(text) {
+  return String(text || "")
+    .replace(/\n?\[\[SCORE_STREAM_DONE\]\]/g, "")
+    .replace(/\n?\[\[SCORE_STREAM_INTERRUPTED\]\]/g, "")
+    .trim();
+}
+
+function extractScoreValue(resultText) {
+  const match = String(resultText || "").match(/(\d+(?:\.\d+)?)\s*\/\s*15/);
+  return match ? match[1] : null;
+}
+
+async function saveScoreHistory(dbClient, { userId, essayText, resultText, scoreValue, wordCount }) {
+  await dbClient.query(
+    `
+      INSERT INTO score_history (user_id, essay_text, result_text, score_value, word_count)
+      VALUES ($1, $2, $3, $4, $5)
+    `,
+    [userId, essayText, resultText, scoreValue, wordCount]
+  );
+}
+
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
@@ -729,6 +751,10 @@ app.get("/api/me", async (req, res) => {
 });
 
 app.post("/ocr", upload.single("image"), async (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: "请先登录后再使用图片识别。" });
+  }
+
   try {
     if (!req.file) {
       return res.status(400).json({ error: "请先上传图片" });
@@ -776,6 +802,87 @@ app.post("/ocr", upload.single("image"), async (req, res) => {
   }
 });
 
+app.get("/api/history", async (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: "请先登录" });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT id, essay_text, score_value, word_count, created_at
+        FROM score_history
+        WHERE user_id = $1
+        ORDER BY created_at DESC, id DESC
+        LIMIT 20
+      `,
+      [req.session.userId]
+    );
+
+    const records = result.rows.map(row => {
+      const normalizedEssay = String(row.essay_text || "").replace(/\s+/g, " ").trim();
+      const essayPreview = normalizedEssay.length > 110
+        ? `${normalizedEssay.slice(0, 110)}...`
+        : normalizedEssay;
+
+      return {
+        id: row.id,
+        essayPreview,
+        scoreValue: row.score_value,
+        wordCount: row.word_count,
+        createdAt: row.created_at
+      };
+    });
+
+    res.json({ records });
+  } catch (error) {
+    console.error("[HISTORY] list error:", error);
+    res.status(500).json({ error: "获取历史记录失败，请稍后再试" });
+  }
+});
+
+app.get("/api/history/:id", async (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: "请先登录" });
+  }
+
+  const historyId = Number(req.params.id);
+
+  if (!Number.isInteger(historyId) || historyId <= 0) {
+    return res.status(400).json({ error: "记录ID无效" });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT id, essay_text, result_text, score_value, word_count, created_at
+        FROM score_history
+        WHERE id = $1 AND user_id = $2
+        LIMIT 1
+      `,
+      [historyId, req.session.userId]
+    );
+
+    const row = result.rows[0];
+
+    if (!row) {
+      return res.status(404).json({ error: "历史记录不存在" });
+    }
+
+    res.json({
+      id: row.id,
+      essayText: row.essay_text,
+      resultText: row.result_text,
+      scoreValue: row.score_value,
+      wordCount: row.word_count,
+      createdAt: row.created_at
+    });
+  } catch (error) {
+    console.error("[HISTORY] detail error:", error);
+    res.status(500).json({ error: "获取历史记录详情失败，请稍后再试" });
+  }
+});
+
 app.post("/score", async (req, res) => {
   if (!req.session?.userId) {
     return res.status(401).send("请先登录后再评分。");
@@ -813,6 +920,7 @@ app.post("/score", async (req, res) => {
   let txOpen = false;
   let clientDisconnected = false;
   let responseEnded = false;
+  let finalResultText = "";
 
   req.on("aborted", () => {
     clientDisconnected = true;
@@ -907,6 +1015,7 @@ app.post("/score", async (req, res) => {
 
       if (content) {
         wroteAnyContent = true;
+        finalResultText += content;
         res.write(content);
       } else {
         res.write("");
@@ -923,6 +1032,17 @@ app.post("/score", async (req, res) => {
         `,
         [req.session.userId]
       );
+
+      const cleanResultText = removeStreamMarks(finalResultText);
+      const scoreValue = extractScoreValue(cleanResultText);
+
+      await saveScoreHistory(dbClient, {
+        userId: req.session.userId,
+        essayText: trimmedEssay,
+        resultText: cleanResultText,
+        scoreValue,
+        wordCount
+      });
 
       await dbClient.query("COMMIT");
       txOpen = false;

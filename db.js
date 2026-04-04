@@ -20,6 +20,19 @@ async function initDB() {
     )
   `);
   console.log("[DB] 用户表初始化完成");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS score_history (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      essay_text TEXT NOT NULL,
+      result_text TEXT NOT NULL,
+      score_value VARCHAR(20),
+      word_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  console.log("[DB] 历史记录表初始化完成");
 }
 
 module.exports = { pool, initDB };
