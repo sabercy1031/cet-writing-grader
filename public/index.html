@@ -8,59 +8,145 @@
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
 
+    :root {
+      --bg-1: #eef4ff;
+      --bg-2: #f7f9fc;
+      --bg-3: #f5f6fa;
+      --card: rgba(255,255,255,0.94);
+      --line: #e5e7eb;
+      --line-2: #dbe2f0;
+      --text-1: #111827;
+      --text-2: #1f2937;
+      --text-3: #4b5563;
+      --text-4: #6b7280;
+      --text-5: #9ca3af;
+      --primary: #4a6cf7;
+      --primary-2: #3657da;
+      --chip-bg: #eef3ff;
+      --chip-line: #d9e3ff;
+      --chip-text: #3157d5;
+      --shadow-1: 0 18px 45px rgba(15,23,42,0.08);
+      --shadow-2: 0 10px 28px rgba(15,23,42,0.04);
+      --shadow-3: 0 6px 16px rgba(15,23,42,0.04);
+    }
+
     body {
       margin: 0;
-      padding: 32px 18px 80px;
+      padding: 18px;
       font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-      background: radial-gradient(circle at top, #eef4ff 0%, #f7f9fc 35%, #f5f6fa 100%);
-      color: #1f2937;
+      background: radial-gradient(circle at top, var(--bg-1) 0%, var(--bg-2) 35%, var(--bg-3) 100%);
+      color: var(--text-2);
+    }
+
+    body.drawer-open {
+      overflow: hidden;
+    }
+
+    .app-shell {
+      max-width: 1380px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .app-shell.no-sidebar {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .main-stage {
+      min-width: 0;
+      display: flex;
+      justify-content: center;
     }
 
     .container {
-      max-width: 920px;
-      margin: 0 auto;
-      background: rgba(255,255,255,0.92);
+      width: 100%;
+      max-width: 980px;
+      background: var(--card);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(226,232,240,0.9);
-      border-radius: 22px;
-      box-shadow: 0 18px 45px rgba(15,23,42,0.08);
+      border-radius: 24px;
+      box-shadow: var(--shadow-1);
       padding: 28px;
+      min-width: 0;
+    }
+
+    .history-sidebar {
+      display: none;
+      position: sticky;
+      top: 18px;
+      height: calc(100vh - 36px);
+      border-radius: 24px;
+      background: var(--card);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(226,232,240,0.9);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .history-sidebar.show {
+      display: flex;
+    }
+
+    .history-mobile-mask {
+      display: none;
+    }
+
+    .history-mobile-close {
+      display: none;
     }
 
     .user-bar {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
       gap: 12px;
       margin-bottom: 18px;
-      min-height: 36px;
+      min-height: 40px;
+      flex-wrap: wrap;
+    }
+
+    .user-bar-left,
+    .user-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
     .user-bar-info {
       font-size: 13px;
-      color: #6b7280;
+      color: var(--text-4);
     }
 
     .user-bar-info strong {
-      color: #1f2937;
+      color: var(--text-2);
     }
 
     .user-bar-btn {
-      border: 1px solid #dbe2f0;
+      border: 1px solid var(--line-2);
       background: #fff;
-      color: #3157d5;
-      padding: 6px 14px;
+      color: var(--chip-text);
+      padding: 7px 14px;
       border-radius: 10px;
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(15,23,42,0.03);
     }
 
     .user-bar-btn:hover {
       background: #f7faff;
       border-color: #c9d6ff;
+    }
+
+    .mobile-history-btn {
+      display: none;
     }
 
     .modal-mask {
@@ -85,18 +171,19 @@
       max-width: 380px;
       box-shadow: 0 24px 60px rgba(15,23,42,0.18);
       position: relative;
+      margin: 16px;
     }
 
     .modal-title {
       font-size: 22px;
       font-weight: 800;
-      color: #111827;
+      color: var(--text-1);
       margin: 0 0 6px;
     }
 
     .modal-sub {
       font-size: 13px;
-      color: #9ca3af;
+      color: var(--text-5);
       margin: 0 0 22px;
     }
 
@@ -106,7 +193,7 @@
       margin-bottom: 20px;
       border-radius: 10px;
       overflow: hidden;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
     }
 
     .modal-tab {
@@ -117,12 +204,12 @@
       border: none;
       cursor: pointer;
       background: #f8fafc;
-      color: #6b7280;
+      color: var(--text-4);
       transition: all 0.18s ease;
     }
 
     .modal-tab.active {
-      background: #4a6cf7;
+      background: var(--primary);
       color: #fff;
     }
 
@@ -144,14 +231,14 @@
       border: 1.5px solid #d7dce5;
       border-radius: 12px;
       font-size: 15px;
-      color: #1f2937;
+      color: var(--text-2);
       background: #fbfcfe;
       outline: none;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .modal-field input:focus {
-      border-color: #4a6cf7;
+      border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(74,108,247,0.12);
     }
 
@@ -167,7 +254,7 @@
       padding: 12px;
       border: none;
       border-radius: 13px;
-      background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
       color: #fff;
       font-size: 16px;
       font-weight: 700;
@@ -188,22 +275,37 @@
       padding: 6px 12px;
       font-size: 13px;
       font-weight: 600;
-      color: #3157d5;
-      background: #eef3ff;
+      color: var(--chip-text);
+      background: var(--chip-bg);
       border-radius: 999px;
       margin-bottom: 12px;
     }
 
-    h1 { margin: 0 0 10px; font-size: 32px; line-height: 1.2; color: #111827; }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 32px;
+      line-height: 1.2;
+      color: var(--text-1);
+    }
 
-    .subtitle { margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #6b7280; }
+    .subtitle {
+      margin: 0 0 16px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-4);
+    }
 
-    .feature-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .feature-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
 
     .feature-chip {
-      border: 1px solid #d9e3ff;
-      background: #eef3ff;
-      color: #3157d5;
+      border: 1px solid var(--chip-line);
+      background: var(--chip-bg);
+      color: var(--chip-text);
       padding: 10px 16px;
       border-radius: 999px;
       font-size: 14px;
@@ -212,7 +314,11 @@
       transition: all 0.18s ease;
     }
 
-    .feature-chip:hover { background: #dfe8ff; border-color: #c8d8ff; transform: translateY(-1px); }
+    .feature-chip:hover {
+      background: #dfe8ff;
+      border-color: #c8d8ff;
+      transform: translateY(-1px);
+    }
 
     .feature-chip.card-chip {
       background: rgba(255,255,255,0.16);
@@ -232,8 +338,8 @@
       padding: 32px 24px;
       border-radius: 18px;
       background: #fff;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-2);
       text-align: center;
     }
 
@@ -244,13 +350,13 @@
     .login-gate-title {
       font-size: 18px;
       font-weight: 700;
-      color: #111827;
+      color: var(--text-1);
       margin: 0 0 8px;
     }
 
     .login-gate-desc {
       font-size: 14px;
-      color: #6b7280;
+      color: var(--text-4);
       margin: 0 0 20px;
       line-height: 1.7;
     }
@@ -260,7 +366,7 @@
       padding: 12px 28px;
       border: none;
       border-radius: 13px;
-      background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
       color: #fff;
       font-size: 16px;
       font-weight: 700;
@@ -270,11 +376,11 @@
 
     .editor-card {
       margin-top: 22px;
-      padding: 22px;
-      border-radius: 18px;
+      padding: 24px;
+      border-radius: 20px;
       background: #fff;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-2);
     }
 
     .section-title-row {
@@ -286,13 +392,33 @@
       margin-bottom: 12px;
     }
 
-    .section-title { margin: 0; font-size: 18px; font-weight: 700; color: #111827; }
+    .section-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-1);
+    }
 
-    .ocr-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .ocr-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
 
-    .ocr-file { max-width: 280px; font-size: 14px; }
+    .ocr-file {
+      max-width: 280px;
+      font-size: 14px;
+    }
 
-    .ocr-status { font-size: 13px; color: #6b7280; margin: 4px 0 12px; line-height: 1.6; }
+    .ocr-status {
+      font-size: 13px;
+      color: var(--text-4);
+      margin: 4px 0 12px;
+      line-height: 1.6;
+    }
+
     .ocr-status.success { color: #15803d; }
     .ocr-status.error { color: #dc2626; }
     .ocr-status.warning { color: #b45309; font-weight: 600; }
@@ -302,31 +428,31 @@
       padding: 12px 14px;
       border-radius: 14px;
       background: #f8fafc;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
       font-size: 13px;
       line-height: 1.7;
-      color: #6b7280;
+      color: var(--text-4);
     }
 
     .system-note strong { color: #374151; }
 
     textarea {
       width: 100%;
-      min-height: 240px;
+      min-height: 250px;
       resize: vertical;
       padding: 16px 18px;
       border-radius: 16px;
       border: 1.5px solid #d7dce5;
       font-size: 16px;
       line-height: 1.8;
-      color: #1f2937;
+      color: var(--text-2);
       background: #fbfcfe;
       outline: none;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     textarea:focus {
-      border-color: #4a6cf7;
+      border-color: var(--primary);
       box-shadow: 0 0 0 4px rgba(74,108,247,0.12);
       background: #fff;
     }
@@ -340,9 +466,23 @@
       flex-wrap: wrap;
     }
 
-    .counter-wrap { display: flex; flex-direction: column; gap: 5px; }
-    .counter { font-size: 14px; color: #4b5563; font-weight: 600; }
-    .hint { font-size: 13px; color: #9ca3af; line-height: 1.6; }
+    .counter-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .counter {
+      font-size: 14px;
+      color: var(--text-3);
+      font-weight: 600;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--text-5);
+      line-height: 1.6;
+    }
 
     .free-score-bar {
       margin-top: 14px;
@@ -352,20 +492,30 @@
       font-weight: 500;
       line-height: 1.6;
       background: #f8fafc;
-      border: 1px solid #e5e7eb;
-      color: #6b7280;
+      border: 1px solid var(--line);
+      color: var(--text-4);
       transition: all 0.2s ease;
     }
 
-    .free-score-bar.low-quota { background: #fffbeb; border-color: #fde68a; color: #92400e; }
-    .free-score-bar.no-quota { background: #fef2f2; border-color: #fecaca; color: #991b1b; font-weight: 600; }
+    .free-score-bar.low-quota {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #92400e;
+    }
+
+    .free-score-bar.no-quota {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
+      font-weight: 600;
+    }
 
     .primary-btn {
       margin-top: 18px;
       padding: 13px 22px;
       border: none;
       border-radius: 14px;
-      background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
       color: #fff;
       font-size: 16px;
       font-weight: 700;
@@ -391,59 +541,68 @@
       box-shadow: 0 8px 18px rgba(107,114,128,0.18);
     }
 
-    #resultWrap { margin-top: 26px; }
+    #resultWrap {
+      margin-top: 26px;
+    }
 
     .raw-stream-box {
-      padding: 20px;
+      padding: 22px;
       border-radius: 18px;
       background: #f8fafc;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
       white-space: pre-wrap;
-      line-height: 1.9;
+      line-height: 1.95;
       min-height: 150px;
       word-break: break-word;
-      color: #1f2937;
+      color: var(--text-2);
       box-shadow: 0 8px 24px rgba(15,23,42,0.03);
+      font-size: 15px;
     }
 
-    .loading { color: #6b7280; }
+    .loading { color: var(--text-4); }
 
-    .score-card-disclaimer {
-      position: relative;
-      z-index: 1;
-      font-size: 12px;
-      color: rgba(255,255,255,0.65);
-      line-height: 1.6;
-      margin-bottom: 14px;
+    .result-layout {
+      display: grid;
+      gap: 22px;
     }
 
-    .result-layout { display: grid; gap: 18px; }
-
-    .top-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
     .secondary-btn {
-      border: 1px solid #dbe2f0;
+      border: 1px solid var(--line-2);
       background: #fff;
-      color: #3157d5;
+      color: var(--chip-text);
       padding: 10px 14px;
       border-radius: 12px;
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 6px 16px rgba(15,23,42,0.04);
+      box-shadow: var(--shadow-3);
       transition: all 0.2s ease;
     }
 
-    .secondary-btn:hover { background: #f7faff; border-color: #c9d6ff; }
-    .secondary-btn:disabled { opacity: 0.72; cursor: not-allowed; }
+    .secondary-btn:hover {
+      background: #f7faff;
+      border-color: #c9d6ff;
+    }
+
+    .secondary-btn:disabled {
+      opacity: 0.72;
+      cursor: not-allowed;
+    }
 
     .score-card {
       position: relative;
       overflow: hidden;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #4a6cf7 0%, #3157d5 100%);
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--primary) 0%, #3157d5 100%);
       color: #fff;
-      padding: 26px 24px;
+      padding: 28px 26px;
       box-shadow: 0 18px 36px rgba(49,87,213,0.22);
       border: none;
       scroll-margin-top: 20px;
@@ -452,8 +611,10 @@
     .score-card::after {
       content: "";
       position: absolute;
-      right: -30px; top: -30px;
-      width: 140px; height: 140px;
+      right: -30px;
+      top: -30px;
+      width: 140px;
+      height: 140px;
       background: rgba(255,255,255,0.12);
       border-radius: 50%;
     }
@@ -470,50 +631,114 @@
       border-color: rgba(255,255,255,0.28);
     }
 
-    .score-value {
-      position: relative; z-index: 1;
-      font-size: 46px; font-weight: 800;
-      line-height: 1; margin-bottom: 12px;
-      letter-spacing: -1px; color: #fff;
+    .score-card-disclaimer {
+      position: relative;
+      z-index: 1;
+      font-size: 12px;
+      color: rgba(255,255,255,0.68);
+      line-height: 1.6;
+      margin-bottom: 14px;
     }
 
-    .score-meta { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .score-value {
+      position: relative;
+      z-index: 1;
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 12px;
+      letter-spacing: -1px;
+      color: #fff;
+    }
+
+    .score-meta {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
 
     .score-pill {
-      display: inline-flex; align-items: center;
-      padding: 8px 12px; border-radius: 999px;
-      background: rgba(255,255,255,0.16); color: #fff;
-      font-size: 13px; font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
       backdrop-filter: blur(4px);
     }
 
     .score-desc {
-      position: relative; z-index: 1;
-      font-size: 15px; line-height: 1.7;
-      color: rgba(255,255,255,0.94); margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+      font-size: 15px;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.94);
+      margin-bottom: 6px;
     }
 
-    .card-nav { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .card-nav {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
 
-    .grid-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
 
     .card {
-      background: #fff; border: 1px solid #e5e7eb;
-      border-radius: 20px; padding: 22px 20px;
-      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 24px 22px;
+      box-shadow: var(--shadow-2);
       scroll-margin-top: 20px;
+      min-width: 0;
     }
 
-    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .card-header-left { display: flex; align-items: center; gap: 10px; }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .card-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
 
     .card-icon {
-      width: 34px; height: 34px; border-radius: 12px;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 17px; flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
     }
 
-    .card-title { font-size: 18px; font-weight: 700; margin: 0; color: #111827; }
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text-1);
+    }
 
     .good .card-icon { background: #ecfdf3; color: #16a34a; }
     .bad .card-icon { background: #fef2f2; color: #dc2626; }
@@ -522,63 +747,155 @@
     .essay-card .card-icon { background: #f5f3ff; color: #7c3aed; }
     .fallback .card-icon { background: #f3f4f6; color: #4b5563; }
 
-    .list { margin: 0; padding-left: 22px; color: #374151; line-height: 1.95; }
+    .list {
+      margin: 0;
+      padding-left: 22px;
+      color: #374151;
+      line-height: 1.95;
+      font-size: 15px;
+    }
+
     .list li + li { margin-top: 8px; }
 
-    .essay-text { margin: 0; white-space: pre-wrap; line-height: 2; color: #374151; word-break: break-word; }
+    .essay-text {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #374151;
+    }
 
-    .essay-preview { position: relative; overflow: hidden; max-height: none; transition: max-height 0.3s ease; }
-    .essay-preview.collapsed { max-height: 230px; }
+    .essay-reading {
+      font-size: 16px;
+      line-height: 2.05;
+      color: #1f2937;
+    }
+
+    .essay-preview {
+      position: relative;
+      overflow: hidden;
+      max-height: none;
+      transition: max-height 0.3s ease;
+    }
+
+    .essay-preview.collapsed {
+      max-height: 280px;
+    }
+
     .essay-preview.collapsed::after {
       content: "";
-      position: absolute; left: 0; right: 0; bottom: 0; height: 80px;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 90px;
       background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
       pointer-events: none;
     }
 
     .toggle-btn {
-      border: none; background: #f3f6ff; color: #3157d5;
-      padding: 8px 12px; border-radius: 10px;
-      font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: background 0.2s ease;
+      border: none;
+      background: #f3f6ff;
+      color: var(--chip-text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease;
     }
 
     .toggle-btn:hover { background: #e8efff; }
 
-    .history-card {
-      margin-top: 22px;
-      padding: 22px;
-      border-radius: 18px;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      box-shadow: 0 10px 28px rgba(15,23,42,0.04);
+    .history-sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.9);
+      flex-shrink: 0;
     }
 
-    .history-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .history-sidebar-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .history-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .history-sidebar-title h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-1);
+    }
+
+    .history-sidebar-sub {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--text-5);
+      line-height: 1.5;
+    }
+
+    .history-sidebar-tools {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .history-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 16px 14px 16px 16px;
+    }
 
     .history-list {
       display: grid;
       gap: 14px;
-      margin-top: 14px;
     }
 
     .history-empty {
       padding: 18px 16px;
       border-radius: 14px;
       background: #f8fafc;
-      border: 1px solid #e5e7eb;
-      color: #6b7280;
+      border: 1px solid var(--line);
+      color: var(--text-4);
       font-size: 14px;
       line-height: 1.7;
       text-align: center;
     }
 
     .history-item {
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
       border-radius: 16px;
       padding: 16px 16px 14px;
       background: #fbfcfe;
       box-shadow: 0 6px 18px rgba(15,23,42,0.03);
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    }
+
+    .history-item.active {
+      border-color: #c7d7ff;
+      background: #f5f8ff;
+      box-shadow: 0 10px 22px rgba(74,108,247,0.09);
+    }
+
+    .history-item:hover {
+      transform: translateY(-1px);
     }
 
     .history-item-top {
@@ -602,22 +919,22 @@
       align-items: center;
       padding: 6px 10px;
       border-radius: 999px;
-      background: #eef3ff;
-      border: 1px solid #d9e3ff;
-      color: #3157d5;
+      background: var(--chip-bg);
+      border: 1px solid var(--chip-line);
+      color: var(--chip-text);
       font-size: 12px;
       font-weight: 700;
     }
 
     .history-time {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--text-4);
       font-weight: 600;
     }
 
     .history-preview {
       margin: 0;
-      color: #4b5563;
+      color: var(--text-3);
       font-size: 14px;
       line-height: 1.8;
       word-break: break-word;
@@ -630,45 +947,199 @@
     }
 
     #scrollToBottomBtn {
-      position: fixed; right: 22px; bottom: 22px; display: none;
-      padding: 11px 16px; border: none; border-radius: 999px;
-      background: linear-gradient(135deg, #4a6cf7 0%, #3657da 100%);
-      color: #fff; font-size: 14px; font-weight: 700;
-      cursor: pointer; box-shadow: 0 10px 24px rgba(74,108,247,0.28); z-index: 999;
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      display: none;
+      padding: 11px 16px;
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(74,108,247,0.28);
+      z-index: 999;
     }
 
-    #scrollToBottomBtn:hover { filter: brightness(0.96); }
+    #scrollToBottomBtn:hover {
+      filter: brightness(0.96);
+    }
 
     .toast {
-      position: fixed; left: 50%; bottom: 28px;
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
       transform: translateX(-50%);
-      background: rgba(17,24,39,0.92); color: #fff;
-      padding: 11px 16px; border-radius: 12px;
-      font-size: 14px; font-weight: 600;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.25s ease, transform 0.25s ease; z-index: 1001;
+      background: rgba(17,24,39,0.92);
+      color: #fff;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 1001;
     }
 
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
 
-    @media (max-width: 760px) {
-      body { padding: 18px 12px 72px; }
-      .container { padding: 18px; border-radius: 18px; }
-      h1 { font-size: 26px; }
-      .grid-two { grid-template-columns: 1fr; }
-      .score-value { font-size: 40px; }
-      .editor-card, .card, .score-card, .history-card { padding: 18px; }
-      .ocr-toolbar { flex-direction: column; align-items: stretch; }
-      .ocr-file { max-width: 100%; }
-      #scrollToBottomBtn { right: 14px; bottom: 14px; }
-      .modal { margin: 16px; }
-      .history-item-top { flex-direction: column; }
-      .history-item-actions { width: 100%; }
-      .history-item-actions .secondary-btn { flex: 1; text-align: center; }
+    @media (max-width: 1120px) {
+      .app-shell {
+        grid-template-columns: 290px minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 960px) {
+      body {
+        padding: 16px 12px 72px;
+      }
+
+      .app-shell,
+      .app-shell.no-sidebar {
+        grid-template-columns: 1fr;
+      }
+
+      .main-stage {
+        justify-content: stretch;
+      }
+
+      .container {
+        max-width: none;
+        padding: 20px 18px;
+        border-radius: 20px;
+      }
+
+      .history-sidebar {
+        display: flex !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: min(86vw, 360px);
+        height: 100vh;
+        z-index: 1800;
+        transform: translateX(-104%);
+        transition: transform 0.28s ease;
+        border-radius: 0 22px 22px 0;
+      }
+
+      .history-sidebar.show {
+        display: flex !important;
+      }
+
+      .history-sidebar.open {
+        transform: translateX(0);
+      }
+
+      .history-mobile-mask {
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,0.38);
+        z-index: 1700;
+      }
+
+      .history-mobile-mask.show {
+        display: block;
+      }
+
+      .history-mobile-close {
+        display: inline-flex;
+      }
+
+      .mobile-history-btn.show-on-mobile {
+        display: inline-flex;
+      }
+
+      .grid-two {
+        grid-template-columns: 1fr;
+      }
+
+      .score-value {
+        font-size: 40px;
+      }
+
+      .editor-card,
+      .card,
+      .score-card {
+        padding: 18px;
+      }
+
+      .ocr-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .ocr-file {
+        max-width: 100%;
+      }
+
+      .history-item-top {
+        flex-direction: column;
+      }
+
+      .history-item-actions {
+        width: 100%;
+      }
+
+      .history-item-actions .secondary-btn {
+        flex: 1;
+        text-align: center;
+      }
+
+      #scrollToBottomBtn {
+        right: 14px;
+        bottom: 14px;
+      }
+
+      h1 {
+        font-size: 27px;
+      }
+
+      .essay-reading {
+        font-size: 15.5px;
+        line-height: 2;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        padding: 18px 16px;
+      }
+
+      .feature-chip {
+        padding: 9px 14px;
+        font-size: 13px;
+      }
+
+      .score-card {
+        border-radius: 20px;
+      }
+
+      .user-bar {
+        align-items: flex-start;
+      }
+
+      .user-bar-right {
+        justify-content: flex-end;
+      }
+
+      .history-sidebar-header {
+        padding: 16px 16px 12px;
+      }
+
+      .history-scroll {
+        padding: 14px 12px 14px 14px;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="history-mobile-mask" id="historyMobileMask"></div>
 
   <!-- 登录弹窗 -->
   <div class="modal-mask" id="modalMask">
@@ -697,88 +1168,103 @@
     </div>
   </div>
 
-  <div class="container">
-
-    <!-- 顶部用户栏 -->
-    <div class="user-bar" id="userBar">
-      <span class="user-bar-info" id="userBarInfo"></span>
-      <button class="user-bar-btn" id="historyTopBtn" type="button" style="display:none;">历史记录</button>
-      <button class="user-bar-btn" id="userBarBtn" onclick="handleLogout()">退出登录</button>
-    </div>
-
-    <div class="hero">
-      <div class="hero-badge">AI 写作批改 · 四六级作文</div>
-      <h1>AI 四六级作文评分</h1>
-      <p class="subtitle">输入你的英文作文，获取 AI 的结构化评分、修改建议与高分改写。</p>
-
-      <div class="feature-nav">
-        <button class="feature-chip" data-target="scoreSection">预测分数</button>
-        <button class="feature-chip" data-target="advantagesSection">优点</button>
-        <button class="feature-chip" data-target="problemsSection">问题</button>
-        <button class="feature-chip" data-target="suggestionsSection">修改建议</button>
-        <button class="feature-chip" data-target="sentencesSection">参考修改句</button>
-        <button class="feature-chip" data-target="essaySection">高分范文</button>
-      </div>
-    </div>
-
-    <!-- 未登录提示 -->
-    <div class="login-gate" id="loginGate">
-      <div class="login-gate-icon">🔒</div>
-      <div class="login-gate-title">请先登录</div>
-      <div class="login-gate-desc">登录后即可免费体验 AI 作文批改<br>新用户每天可免费评分 3 次</div>
-      <button class="login-gate-btn" onclick="showModal()">立即登录 / 注册</button>
-    </div>
-
-    <!-- 编辑器（登录后显示） -->
-    <div class="editor-card" id="editorCard" style="display:none;">
-      <div class="section-title-row">
-        <h2 class="section-title">输入作文</h2>
-        <button id="resetBtn" class="secondary-btn" type="button">重新开始 / 新作文</button>
-      </div>
-
-      <div class="ocr-toolbar">
-        <input id="imageUpload" class="ocr-file" type="file" accept="image/*" />
-        <button id="ocrBtn" class="secondary-btn" type="button">图片识别</button>
-      </div>
-
-      <div id="ocrStatus" class="ocr-status">
-        建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。
-      </div>
-
-      <textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
-
-      <div class="system-note">
-        <strong>说明：</strong>如果你使用了图片识别，建议先检查识别结果再评分。系统评分前可能会做轻微格式整理，例如补空格、处理断行和标点间距，但不会替你纠正语法、拼写或润色表达。
-      </div>
-
-      <div class="editor-footer">
-        <div class="counter-wrap">
-          <div class="counter" id="counter">当前词数：0</div>
-          <div class="hint">建议词数：四级 120–180 词 / 六级 150–220 词。输入越完整，批改结果通常越稳定。</div>
+  <div class="app-shell no-sidebar" id="appShell">
+    <aside class="history-sidebar" id="historySidebar">
+      <div class="history-sidebar-header">
+        <div class="history-sidebar-title">
+          <div class="history-badge">🕘</div>
+          <div>
+            <h2>历史记录</h2>
+            <p class="history-sidebar-sub">查看过往评分结果与原作文</p>
+          </div>
+        </div>
+        <div class="history-sidebar-tools">
+          <button id="historyRefreshBtn" class="user-bar-btn" type="button">刷新</button>
+          <button id="historyCloseBtn" class="user-bar-btn history-mobile-close" type="button">关闭</button>
         </div>
       </div>
-
-      <div id="freeScoreBar" class="free-score-bar"></div>
-
-      <button id="btn" class="primary-btn">开始评分</button>
-    </div>
-
-    <div class="history-card" id="historyCard" style="display:none;">
-      <div class="section-title-row">
-        <h2 class="section-title">历史记录</h2>
-        <div class="history-actions">
-          <button id="historyRefreshBtn" class="secondary-btn" type="button">刷新记录</button>
+      <div class="history-scroll">
+        <div id="historyList" class="history-list">
+          <div class="history-empty">请先登录后查看历史记录</div>
         </div>
       </div>
+    </aside>
 
-      <div id="historyList" class="history-list">
-        <div class="history-empty">正在加载历史记录...</div>
+    <main class="main-stage">
+      <div class="container">
+        <!-- 顶部用户栏 -->
+        <div class="user-bar" id="userBar">
+          <div class="user-bar-left">
+            <button class="user-bar-btn mobile-history-btn" id="historyTopBtn" type="button">历史记录</button>
+          </div>
+          <div class="user-bar-right">
+            <span class="user-bar-info" id="userBarInfo"></span>
+            <button class="user-bar-btn" id="userBarBtn" onclick="handleLogout()">退出登录</button>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-badge">AI 写作批改 · 四六级作文</div>
+          <h1>AI 四六级作文评分</h1>
+          <p class="subtitle">输入你的英文作文，获取 AI 的结构化评分、修改建议与高分改写。</p>
+
+          <div class="feature-nav">
+            <button class="feature-chip" data-target="scoreSection">预测分数</button>
+            <button class="feature-chip" data-target="advantagesSection">优点</button>
+            <button class="feature-chip" data-target="problemsSection">问题</button>
+            <button class="feature-chip" data-target="suggestionsSection">修改建议</button>
+            <button class="feature-chip" data-target="sentencesSection">参考修改句</button>
+            <button class="feature-chip" data-target="essaySection">高分范文</button>
+          </div>
+        </div>
+
+        <!-- 未登录提示 -->
+        <div class="login-gate" id="loginGate">
+          <div class="login-gate-icon">🔒</div>
+          <div class="login-gate-title">请先登录</div>
+          <div class="login-gate-desc">登录后即可免费体验 AI 作文批改<br>新用户每天可免费评分 3 次</div>
+          <button class="login-gate-btn" onclick="showModal()">立即登录 / 注册</button>
+        </div>
+
+        <!-- 编辑器（登录后显示） -->
+        <div class="editor-card" id="editorCard" style="display:none;">
+          <div class="section-title-row">
+            <h2 class="section-title">输入作文</h2>
+            <button id="resetBtn" class="secondary-btn" type="button">重新开始 / 新作文</button>
+          </div>
+
+          <div class="ocr-toolbar">
+            <input id="imageUpload" class="ocr-file" type="file" accept="image/*" />
+            <button id="ocrBtn" class="secondary-btn" type="button">图片识别</button>
+          </div>
+
+          <div id="ocrStatus" class="ocr-status">
+            建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。
+          </div>
+
+          <textarea id="essay" placeholder="请输入你的英文作文..."></textarea>
+
+          <div class="system-note">
+            <strong>说明：</strong>如果你使用了图片识别，建议先检查识别结果再评分。系统评分前可能会做轻微格式整理，例如补空格、处理断行和标点间距，但不会替你纠正语法、拼写或润色表达。
+          </div>
+
+          <div class="editor-footer">
+            <div class="counter-wrap">
+              <div class="counter" id="counter">当前词数：0</div>
+              <div class="hint">建议词数：四级 120–180 词 / 六级 150–220 词。输入越完整，批改结果通常越稳定。</div>
+            </div>
+          </div>
+
+          <div id="freeScoreBar" class="free-score-bar"></div>
+
+          <button id="btn" class="primary-btn">开始评分</button>
+        </div>
+
+        <div id="resultWrap">
+          <div id="result"></div>
+        </div>
       </div>
-    </div>
-
-    <div id="resultWrap">
-      <div id="result"></div>
-    </div>
+    </main>
   </div>
 
   <button id="scrollToBottomBtn">查看最新评分结果</button>
@@ -790,7 +1276,7 @@
     const SCORE_STREAM_INTERRUPTED_MARK = "[[SCORE_STREAM_INTERRUPTED]]";
 
     function removeStreamMarks(text) {
-      return text
+      return String(text || "")
         .replace(/\n?\[\[SCORE_STREAM_DONE\]\]/g, "")
         .replace(/\n?\[\[SCORE_STREAM_INTERRUPTED\]\]/g, "")
         .trim();
@@ -798,29 +1284,33 @@
 
     // ── 全局用户状态 ─────────────────────────────────────────
     let currentUser = null; // { username, freeScoreLeft }
+    let selectedHistoryId = null;
 
     // ── DOM 引用 ─────────────────────────────────────────────
-    const textarea       = document.getElementById("essay");
-    const result         = document.getElementById("result");
-    const button         = document.getElementById("btn");
-    const counter        = document.getElementById("counter");
-    const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
-    const toast          = document.getElementById("toast");
-    const imageUpload    = document.getElementById("imageUpload");
-    const ocrBtn         = document.getElementById("ocrBtn");
-    const ocrStatus      = document.getElementById("ocrStatus");
-    const resetBtn       = document.getElementById("resetBtn");
-    const freeScoreBar   = document.getElementById("freeScoreBar");
-    const editorCard     = document.getElementById("editorCard");
-    const loginGate      = document.getElementById("loginGate");
-    const userBar        = document.getElementById("userBar");
-    const userBarInfo    = document.getElementById("userBarInfo");
-    const userBarBtn     = document.getElementById("userBarBtn");
-    const modalMask      = document.getElementById("modalMask");
-    const historyCard    = document.getElementById("historyCard");
-    const historyList    = document.getElementById("historyList");
+    const appShell          = document.getElementById("appShell");
+    const historySidebar    = document.getElementById("historySidebar");
+    const historyMobileMask = document.getElementById("historyMobileMask");
+    const historyTopBtn     = document.getElementById("historyTopBtn");
+    const historyCloseBtn   = document.getElementById("historyCloseBtn");
     const historyRefreshBtn = document.getElementById("historyRefreshBtn");
-    const historyTopBtn  = document.getElementById("historyTopBtn");
+    const historyList       = document.getElementById("historyList");
+
+    const textarea          = document.getElementById("essay");
+    const result            = document.getElementById("result");
+    const button            = document.getElementById("btn");
+    const counter           = document.getElementById("counter");
+    const scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
+    const toast             = document.getElementById("toast");
+    const imageUpload       = document.getElementById("imageUpload");
+    const ocrBtn            = document.getElementById("ocrBtn");
+    const ocrStatus         = document.getElementById("ocrStatus");
+    const resetBtn          = document.getElementById("resetBtn");
+    const freeScoreBar      = document.getElementById("freeScoreBar");
+    const editorCard        = document.getElementById("editorCard");
+    const loginGate         = document.getElementById("loginGate");
+    const userBarInfo       = document.getElementById("userBarInfo");
+    const userBarBtn        = document.getElementById("userBarBtn");
+    const modalMask         = document.getElementById("modalMask");
 
     let autoFollow = true;
     let isStreaming = false;
@@ -834,17 +1324,18 @@
     let ocrNeedsReview = false;
     let isApplyingOcrResult = false;
     let currentTab = "login";
+    let hasOcrSource = false;
 
     let scoreAbortController = null;
     let ocrAbortController = null;
     let activeScoreRequestId = 0;
     let activeOcrRequestId = 0;
     let historyRecords = [];
+    let viewSessionNonce = 0;
 
     const defaultOcrStatusText = "建议：请尽量正面拍摄、光线充足、字迹清晰。识别结果会先填入文本框，你可以手动检查后再评分。";
 
     // ── 登录弹窗控制 ─────────────────────────────────────────
-
     function showModal() {
       modalMask.classList.add("show");
       document.getElementById("inputUsername").focus();
@@ -867,7 +1358,7 @@
     async function handleAuth() {
       const username = document.getElementById("inputUsername").value.trim();
       const password = document.getElementById("inputPassword").value;
-      const errEl    = document.getElementById("modalError");
+      const errEl = document.getElementById("modalError");
       const submitBtn = document.getElementById("modalSubmit");
 
       if (!username || !password) {
@@ -904,7 +1395,6 @@
       }
     }
 
-    // 支持回车提交
     document.getElementById("inputPassword").addEventListener("keydown", e => {
       if (e.key === "Enter") handleAuth();
     });
@@ -912,29 +1402,125 @@
       if (e.key === "Enter") handleAuth();
     });
 
-    // ── 登录/登出状态渲染 ────────────────────────────────────
+    // ── 用户态切换与前端状态清空 ─────────────────────────────
+    function abortActiveScoreRequest() {
+      activeScoreRequestId += 1;
+      try { scoreAbortController?.abort(); } catch (_) {}
+      scoreAbortController = null;
+      isStreaming = false;
+      isLoading = false;
+    }
+
+    function abortActiveOcrRequest() {
+      activeOcrRequestId += 1;
+      try { ocrAbortController?.abort(); } catch (_) {}
+      ocrAbortController = null;
+      isOcrLoading = false;
+      isApplyingOcrResult = false;
+    }
+
+    function setOcrStatus(text, type = "") {
+      ocrStatus.className = `ocr-status${type ? " " + type : ""}`;
+      ocrStatus.textContent = text;
+    }
+
+    function resetResultArea() {
+      result.innerHTML = "";
+      rawResultText = "";
+      hasSuccess = false;
+      hasStructuredResult = false;
+      sectionCopyMap = {};
+      isEssayExpanded = false;
+      updateScrollButton();
+    }
+
+    function closeHistoryDrawer() {
+      historySidebar.classList.remove("open");
+      historyMobileMask.classList.remove("show");
+      document.body.classList.remove("drawer-open");
+    }
+
+    function openHistoryDrawer() {
+      if (window.innerWidth > 960) return;
+      historySidebar.classList.add("open");
+      historyMobileMask.classList.add("show");
+      document.body.classList.add("drawer-open");
+    }
+
+    function setScoreButtonState() {
+      if (!currentUser || currentUser.freeScoreLeft <= 0) {
+        button.disabled = true;
+        button.classList.add("quota-empty");
+        button.innerText = "今日次数已用完";
+        return;
+      }
+
+      if (isLoading || isStreaming) {
+        button.disabled = true;
+        button.classList.remove("quota-empty");
+        button.innerText = "评分中...";
+        return;
+      }
+
+      button.disabled = false;
+      button.classList.remove("quota-empty");
+      button.innerText = hasSuccess ? "重新评分" : "开始评分";
+    }
+
+    function resetUserViewState() {
+      viewSessionNonce += 1;
+
+      abortActiveScoreRequest();
+      abortActiveOcrRequest();
+      closeHistoryDrawer();
+
+      textarea.value = "";
+      imageUpload.value = "";
+      updateWordCounter();
+
+      resetResultArea();
+
+      setOcrStatus(defaultOcrStatusText, "");
+      ocrNeedsReview = false;
+      hasOcrSource = false;
+
+      selectedHistoryId = null;
+      historyRecords = [];
+      historyList.innerHTML = currentUser
+        ? `<div class="history-empty">正在加载历史记录...</div>`
+        : `<div class="history-empty">请先登录后查看历史记录</div>`;
+
+      autoFollow = true;
+      setScoreButtonState();
+    }
 
     function renderLoggedIn() {
+      resetUserViewState();
+
+      appShell.classList.remove("no-sidebar");
       loginGate.classList.remove("show");
       editorCard.style.display = "block";
-      historyCard.style.display = "block";
+      historySidebar.classList.add("show");
+
       userBarInfo.innerHTML = `你好，<strong>${escapeHtml(currentUser.username)}</strong>`;
       userBarBtn.style.display = "inline-block";
-      historyTopBtn.style.display = "inline-block";
+      historyTopBtn.classList.add("show-on-mobile");
+
       updateFreeScoreBar();
       loadHistoryList();
     }
 
     function renderLoggedOut() {
+      resetUserViewState();
+
+      appShell.classList.add("no-sidebar");
       loginGate.classList.add("show");
       editorCard.style.display = "none";
-      historyCard.style.display = "none";
+      historySidebar.classList.remove("show");
+
       userBarInfo.textContent = "";
       userBarBtn.style.display = "none";
-      historyTopBtn.style.display = "none";
-      result.innerHTML = "";
-      historyRecords = [];
-      historyList.innerHTML = `<div class="history-empty">请先登录后查看历史记录</div>`;
+      historyTopBtn.classList.remove("show-on-mobile");
     }
 
     async function handleLogout() {
@@ -946,8 +1532,7 @@
       showToast("已退出登录");
     }
 
-    // ── 免费次数显示（从服务器数据） ────────────────────────
-
+    // ── 免费次数显示 ─────────────────────────────────────────
     function updateFreeScoreBar() {
       if (!currentUser) return;
       const left = currentUser.freeScoreLeft;
@@ -955,30 +1540,18 @@
       if (left <= 0) {
         freeScoreBar.className = "free-score-bar no-quota";
         freeScoreBar.textContent = "今日免费次数已用完，明天可继续使用";
-        button.disabled = true;
-        button.classList.add("quota-empty");
-        button.innerText = "今日次数已用完";
       } else if (left === 1) {
         freeScoreBar.className = "free-score-bar low-quota";
         freeScoreBar.textContent = `剩余免费评分次数：${left} 次（今日最后一次）`;
-        if (!isLoading) {
-          button.disabled = false;
-          button.classList.remove("quota-empty");
-          button.innerText = "开始评分";
-        }
       } else {
         freeScoreBar.className = "free-score-bar";
         freeScoreBar.textContent = `剩余免费评分次数：${left} 次`;
-        if (!isLoading) {
-          button.disabled = false;
-          button.classList.remove("quota-empty");
-          button.innerText = "开始评分";
-        }
       }
+
+      setScoreButtonState();
     }
 
-    // ── 页面初始化：检查登录态 ───────────────────────────────
-
+    // ── 页面初始化 ───────────────────────────────────────────
     async function initPage() {
       try {
         const res = await fetch("/api/me");
@@ -987,17 +1560,18 @@
           currentUser = { username: data.username, freeScoreLeft: data.freeScoreLeft };
           renderLoggedIn();
         } else {
+          currentUser = null;
           renderLoggedOut();
           showModal();
         }
       } catch {
+        currentUser = null;
         renderLoggedOut();
         showModal();
       }
     }
 
     // ── 工具函数 ─────────────────────────────────────────────
-
     function getPageHeight() {
       return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
     }
@@ -1028,7 +1602,7 @@
     }
 
     function countWords(text) {
-      const trimmed = text.trim();
+      const trimmed = String(text || "").trim();
       if (!trimmed) return 0;
       return trimmed.split(/\s+/).filter(Boolean).length;
     }
@@ -1044,8 +1618,19 @@
     }
 
     function cleanEssayText(text) {
-      if (!text) return text;
-      return text.replace(/\s*\(?\s*[Ww]ord\s+[Cc]ount\s*[:：]?\s*\d+\s*\)?\s*$/m, "").trim();
+      if (!text) return "";
+      return String(text).replace(/\s*\(?\s*[Ww]ord\s+[Cc]ount\s*[:：]?\s*\d+\s*\)?\s*$/m, "").trim();
+    }
+
+    function stripDisplayMarkdown(text) {
+      let t = String(text || "");
+      t = t.replace(/^\s{0,3}#{1,6}\s*/gm, "");
+      t = t.replace(/\*\*([^*]+)\*\*/g, "$1");
+      t = t.replace(/\*([^*\n]+)\*/g, "$1");
+      t = t.replace(/`([^`\n]+)`/g, "$1");
+      t = t.replace(/__([^_]+)__/g, "$1");
+      t = t.replace(/_([^_\n]+)_/g, "$1");
+      return t.trim();
     }
 
     function normalizeAiText(text) {
@@ -1086,14 +1671,16 @@
 
     function sectionToList(sectionText) {
       if (!sectionText) return [];
-      const normalized = sectionText.replace(/\r/g, "").replace(/^\s*[-•]\s*/gm, "1. ");
+      const normalized = stripDisplayMarkdown(
+        sectionText.replace(/\r/g, "").replace(/^\s*[-•]\s*/gm, "1. ")
+      );
       const parts = normalized
         .split(/\n(?=\s*(?:\d+[\.、]|[-•]))/)
         .map(i => i.trim()).filter(Boolean)
-        .map(i => i.replace(/^\s*(\d+[\.、]|[-•])\s*/, "").trim())
+        .map(i => stripDisplayMarkdown(i.replace(/^\s*(\d+[\.、]|[-•])\s*/, "").trim()))
         .filter(Boolean);
       if (parts.length > 0) return parts;
-      return normalized.split("\n").map(i => i.trim()).filter(Boolean);
+      return normalized.split("\n").map(i => stripDisplayMarkdown(i.trim())).filter(Boolean);
     }
 
     function getLevelInfo(score) {
@@ -1116,34 +1703,42 @@
     function parseStructuredResult(text) {
       const cleanText = normalizeAiText(text);
       const titles = ["【预测分数】","【优点】","【问题】","【修改建议】","【参考修改句】","【高分范文】"];
-      const scoreText           = extractSectionByTitles(cleanText, "【预测分数】", titles);
-      const advantagesText      = extractSectionByTitles(cleanText, "【优点】", titles);
-      const problemsText        = extractSectionByTitles(cleanText, "【问题】", titles);
-      const suggestionsText     = extractSectionByTitles(cleanText, "【修改建议】", titles);
-      const revisedSentencesText= extractSectionByTitles(cleanText, "【参考修改句】", titles);
-      const highScoreEssayText  = extractSectionByTitles(cleanText, "【高分范文】", titles);
-      const scoreValue  = extractScoreValue(scoreText, cleanText);
+      const scoreText            = extractSectionByTitles(cleanText, "【预测分数】", titles);
+      const advantagesText       = extractSectionByTitles(cleanText, "【优点】", titles);
+      const problemsText         = extractSectionByTitles(cleanText, "【问题】", titles);
+      const suggestionsText      = extractSectionByTitles(cleanText, "【修改建议】", titles);
+      const revisedSentencesText = extractSectionByTitles(cleanText, "【参考修改句】", titles);
+      const highScoreEssayText   = extractSectionByTitles(cleanText, "【高分范文】", titles);
+
+      const scoreValue = extractScoreValue(scoreText, cleanText);
       const scoreNumber = scoreValue ? Number(scoreValue) : null;
-      const levelInfo   = scoreNumber !== null ? getLevelInfo(scoreNumber) : null;
+      const levelInfo = scoreNumber !== null ? getLevelInfo(scoreNumber) : null;
+
       return {
         normalizedRaw: cleanText,
-        scoreRaw: scoreText || "",
-        scoreValue, scoreNumber,
-        level:   levelInfo ? levelInfo.level   : "",
-        surpass: levelInfo ? levelInfo.surpass  : "",
-        advantages:       sectionToList(advantagesText),
-        problems:         sectionToList(problemsText),
-        suggestions:      sectionToList(suggestionsText),
+        scoreRaw: stripDisplayMarkdown(scoreText || ""),
+        scoreValue,
+        scoreNumber,
+        level: levelInfo ? levelInfo.level : "",
+        surpass: levelInfo ? levelInfo.surpass : "",
+        advantages: sectionToList(advantagesText),
+        problems: sectionToList(problemsText),
+        suggestions: sectionToList(suggestionsText),
         revisedSentences: sectionToList(revisedSentencesText),
-        highScoreEssay:   cleanEssayText(highScoreEssayText.trim())
+        highScoreEssay: cleanEssayText(stripDisplayMarkdown(highScoreEssayText.trim()))
       };
     }
 
     function shouldFallback(parsed) {
       const coreCount = [
-        !!parsed.scoreValue, parsed.advantages.length > 0, parsed.problems.length > 0,
-        parsed.suggestions.length > 0, parsed.revisedSentences.length > 0, !!parsed.highScoreEssay
+        !!parsed.scoreValue,
+        parsed.advantages.length > 0,
+        parsed.problems.length > 0,
+        parsed.suggestions.length > 0,
+        parsed.revisedSentences.length > 0,
+        !!parsed.highScoreEssay
       ].filter(Boolean).length;
+
       if (!parsed.scoreValue) return true;
       if (!parsed.suggestions.length) return true;
       if (coreCount < 4) return true;
@@ -1164,18 +1759,23 @@
         ? `预测分数\n${parsed.scoreValue} / 15\n评价等级：${parsed.level}\n估算超越：${parsed.surpass}% 的考生`
         : `预测分数\n${parsed.scoreRaw || "未识别"}`;
       sectionCopyMap = {
-        copyFull: rawText, copyScore: scoreText,
-        copyAdvantages:  listToText("优点", parsed.advantages),
-        copyProblems:    listToText("问题", parsed.problems),
+        copyFull: rawText,
+        copyScore: scoreText,
+        copyAdvantages: listToText("优点", parsed.advantages),
+        copyProblems: listToText("问题", parsed.problems),
         copySuggestions: listToText("修改建议", parsed.suggestions),
-        copySentences:   listToText("参考修改句", parsed.revisedSentences),
+        copySentences: listToText("参考修改句", parsed.revisedSentences),
         copyEssay: parsed.highScoreEssay ? `高分范文\n${parsed.highScoreEssay}` : "高分范文\n暂无内容"
       };
     }
 
     async function copyText(text) {
-      try { await navigator.clipboard.writeText(text); showToast("复制成功"); }
-      catch { showToast("复制失败，请稍后重试"); }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast("复制成功");
+      } catch {
+        showToast("复制失败，请稍后重试");
+      }
     }
 
     function jumpToSection(targetId) {
@@ -1198,9 +1798,10 @@
 
     function bindEssayToggle(canToggle) {
       if (!canToggle) return;
-      const toggleBtn  = document.getElementById("toggleEssayBtn");
+      const toggleBtn = document.getElementById("toggleEssayBtn");
       const essayPreview = document.getElementById("essayPreview");
       if (!toggleBtn || !essayPreview) return;
+
       toggleBtn.onclick = () => {
         isEssayExpanded = !isEssayExpanded;
         essayPreview.classList.toggle("collapsed", !isEssayExpanded);
@@ -1211,6 +1812,7 @@
     function renderFallback(rawText) {
       hasStructuredResult = false;
       sectionCopyMap = { copyFull: rawText };
+
       result.innerHTML = `
         <div class="result-layout">
           <div class="top-actions">
@@ -1223,28 +1825,33 @@
                 <h3 class="card-title">批改结果</h3>
               </div>
             </div>
-            <pre class="essay-text">${escapeHtml(rawText)}</pre>
+            <pre class="essay-text essay-reading">${escapeHtml(rawText)}</pre>
           </div>
-        </div>`;
+        </div>
+      `;
       bindCopyButtons();
     }
 
     function renderStructuredResult(rawText) {
       const parsed = parseStructuredResult(rawText);
-      if (shouldFallback(parsed)) { renderFallback(rawText); return; }
+      if (shouldFallback(parsed)) {
+        renderFallback(rawText);
+        return;
+      }
 
       hasStructuredResult = true;
       setupSectionCopyMap(parsed, rawText);
 
       const scoreDisplay = `${escapeHtml(parsed.scoreValue)} / 15`;
-      const scoreDesc    = "这是 AI 结合四六级评分标准给出的预测分数，可作为你本次作文水平的直观参考。超越百分比为体验化估算值，用于增强反馈感。";
-      const essayIsLong  = parsed.highScoreEssay && parsed.highScoreEssay.length > 320;
+      const scoreDesc = "这是 AI 结合四六级评分标准给出的预测分数，可作为你本次作文水平的直观参考。超越百分比为体验化估算值，用于增强反馈感。";
+      const essayIsLong = parsed.highScoreEssay && parsed.highScoreEssay.length > 360;
 
       result.innerHTML = `
         <div class="result-layout">
           <div class="top-actions">
             <button class="secondary-btn" data-copy-key="copyFull">复制全部批改结果</button>
           </div>
+
           <div class="score-card" id="scoreSection">
             <div class="card-header">
               <div class="card-header-left">
@@ -1253,13 +1860,17 @@
               </div>
               <button class="secondary-btn" data-copy-key="copyScore">复制本区</button>
             </div>
+
             <div class="score-value">${scoreDisplay}</div>
+
             <div class="score-meta">
               <span class="score-pill">评价等级：${escapeHtml(parsed.level)}</span>
               <span class="score-pill">估算超越：${escapeHtml(String(parsed.surpass))}% 的考生</span>
             </div>
+
             <div class="score-desc">${scoreDesc}</div>
             <div class="score-card-disclaimer">本评分为 AI 预测分数，整体略偏宽松，用于帮助你发现问题与提升表达。</div>
+
             <div class="card-nav">
               <button class="feature-chip card-chip" data-target="scoreSection">预测分数</button>
               <button class="feature-chip card-chip" data-target="advantagesSection">优点</button>
@@ -1279,7 +1890,9 @@
                 </div>
                 <button class="secondary-btn" data-copy-key="copyAdvantages">复制本区</button>
               </div>
-              <ul class="list">${renderList(parsed.advantages)}</ul>
+              ${parsed.advantages.length
+                ? `<ol class="list">${renderList(parsed.advantages)}</ol>`
+                : `<p class="essay-text">本次未解析到该部分内容。</p>`}
             </div>
 
             <div class="card bad" id="problemsSection">
@@ -1290,7 +1903,9 @@
                 </div>
                 <button class="secondary-btn" data-copy-key="copyProblems">复制本区</button>
               </div>
-              <ul class="list">${renderList(parsed.problems)}</ul>
+              ${parsed.problems.length
+                ? `<ol class="list">${renderList(parsed.problems)}</ol>`
+                : `<p class="essay-text">本次未解析到该部分内容。</p>`}
             </div>
           </div>
 
@@ -1298,12 +1913,14 @@
             <div class="card suggest" id="suggestionsSection">
               <div class="card-header">
                 <div class="card-header-left">
-                  <div class="card-icon">🛠️</div>
+                  <div class="card-icon">💡</div>
                   <h3 class="card-title">修改建议</h3>
                 </div>
                 <button class="secondary-btn" data-copy-key="copySuggestions">复制本区</button>
               </div>
-              <ul class="list">${renderList(parsed.suggestions)}</ul>
+              ${parsed.suggestions.length
+                ? `<ol class="list">${renderList(parsed.suggestions)}</ol>`
+                : `<p class="essay-text">本次未解析到该部分内容。</p>`}
             </div>
 
             <div class="card sentence" id="sentencesSection">
@@ -1314,7 +1931,9 @@
                 </div>
                 <button class="secondary-btn" data-copy-key="copySentences">复制本区</button>
               </div>
-              <ul class="list">${renderList(parsed.revisedSentences)}</ul>
+              ${parsed.revisedSentences.length
+                ? `<ol class="list">${renderList(parsed.revisedSentences)}</ol>`
+                : `<p class="essay-text">本次未解析到该部分内容。</p>`}
             </div>
           </div>
 
@@ -1329,8 +1948,9 @@
                 ${essayIsLong ? `<button class="toggle-btn" id="toggleEssayBtn">${isEssayExpanded ? "收起范文" : "展开全文"}</button>` : ""}
               </div>
             </div>
+
             <div class="essay-preview ${essayIsLong && !isEssayExpanded ? "collapsed" : ""}" id="essayPreview">
-              <pre class="essay-text">${escapeHtml(parsed.highScoreEssay)}</pre>
+              <pre class="essay-text essay-reading">${escapeHtml(parsed.highScoreEssay)}</pre>
             </div>
           </div>
         </div>
@@ -1341,6 +1961,7 @@
       bindEssayToggle(essayIsLong);
     }
 
+    // ── 历史记录 ────────────────────────────────────────────
     function formatHistoryTime(input) {
       const date = new Date(input);
       if (Number.isNaN(date.getTime())) return "时间未知";
@@ -1352,12 +1973,6 @@
       return `${y}-${m}-${d} ${hh}:${mm}`;
     }
 
-    function getHistoryPreview(text) {
-      const normalized = String(text || "").replace(/\s+/g, " ").trim();
-      if (!normalized) return "暂无作文内容预览";
-      return normalized.length > 110 ? `${normalized.slice(0, 110)}...` : normalized;
-    }
-
     function renderHistoryList(records) {
       if (!records || records.length === 0) {
         historyList.innerHTML = `<div class="history-empty">暂无历史记录。你评分成功后，记录会自动保存在这里。</div>`;
@@ -1366,10 +1981,9 @@
 
       historyList.innerHTML = records.map(item => {
         const scoreText = item.scoreValue ? `${escapeHtml(String(item.scoreValue))} / 15` : "未识别";
-        const previewText = item.essayPreview || getHistoryPreview("");
-
+        const activeClass = String(selectedHistoryId) === String(item.id) ? "active" : "";
         return `
-          <div class="history-item">
+          <div class="history-item ${activeClass}">
             <div class="history-item-top">
               <div class="history-meta">
                 <span class="history-pill">分数：${scoreText}</span>
@@ -1381,7 +1995,7 @@
                 <button class="secondary-btn" type="button" data-history-load="${item.id}">载入原文</button>
               </div>
             </div>
-            <p class="history-preview">${escapeHtml(previewText)}</p>
+            <p class="history-preview">${escapeHtml(item.essayPreview || "暂无作文内容预览")}</p>
           </div>
         `;
       }).join("");
@@ -1396,30 +2010,47 @@
 
     async function loadHistoryList(showSuccessToast = false) {
       if (!currentUser) return;
+      const nonce = viewSessionNonce;
+
       historyList.innerHTML = `<div class="history-empty">正在加载历史记录...</div>`;
       historyRefreshBtn.disabled = true;
 
       try {
         const res = await fetch("/api/history");
         const data = await res.json();
+
+        if (nonce !== viewSessionNonce) return;
+
         if (!res.ok) {
           throw new Error(data.error || "获取历史记录失败");
         }
 
         historyRecords = Array.isArray(data.records) ? data.records : [];
         renderHistoryList(historyRecords);
+
         if (showSuccessToast) showToast("历史记录已刷新");
       } catch (error) {
+        if (nonce !== viewSessionNonce) return;
         historyList.innerHTML = `<div class="history-empty">${escapeHtml(error.message || "获取历史记录失败，请稍后再试")}</div>`;
       } finally {
-        historyRefreshBtn.disabled = false;
+        if (nonce === viewSessionNonce) {
+          historyRefreshBtn.disabled = false;
+        }
       }
     }
 
     async function handleViewHistory(historyId) {
+      if (!currentUser) return;
+      const nonce = viewSessionNonce;
+      selectedHistoryId = historyId;
+      renderHistoryList(historyRecords);
+
       try {
         const res = await fetch(`/api/history/${historyId}`);
         const data = await res.json();
+
+        if (nonce !== viewSessionNonce) return;
+
         if (!res.ok) {
           throw new Error(data.error || "获取历史记录详情失败");
         }
@@ -1431,40 +2062,52 @@
 
         rawResultText = resultText;
         hasSuccess = true;
+        isEssayExpanded = false;
         renderStructuredResult(resultText);
+        closeHistoryDrawer();
         scrollPageToBottom(false, false);
         showToast("已载入历史评分结果");
+        setScoreButtonState();
       } catch (error) {
+        if (nonce !== viewSessionNonce) return;
         showToast(error.message || "载入历史记录失败");
       }
     }
 
     async function handleLoadHistoryEssay(historyId) {
+      if (!currentUser) return;
+      const nonce = viewSessionNonce;
+      selectedHistoryId = historyId;
+      renderHistoryList(historyRecords);
+
       try {
         const res = await fetch(`/api/history/${historyId}`);
         const data = await res.json();
+
+        if (nonce !== viewSessionNonce) return;
+
         if (!res.ok) {
           throw new Error(data.error || "获取历史记录详情失败");
         }
 
-        const essayText = data.essayText || "";
-        textarea.value = essayText;
+        textarea.value = data.essayText || "";
         updateWordCounter();
+
+        hasOcrSource = false;
+        ocrNeedsReview = false;
+        setOcrStatus(defaultOcrStatusText, "");
+
+        closeHistoryDrawer();
+        editorCard.scrollIntoView({ behavior: "smooth", block: "start" });
         textarea.focus();
         showToast("已载入原作文");
-        editorCard.scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (error) {
+        if (nonce !== viewSessionNonce) return;
         showToast(error.message || "载入原文失败");
       }
     }
 
     // ── OCR ─────────────────────────────────────────────────
-
-    function setOcrStatus(text, type = "") {
-      ocrStatus.className = `ocr-status${type ? " " + type : ""}`;
-      ocrStatus.textContent = text;
-    }
-
     async function handleOCR() {
       if (!currentUser) {
         showModal();
@@ -1477,7 +2120,7 @@
         return;
       }
 
-      if (isOcrLoading) return;
+      if (isOcrLoading || isLoading) return;
 
       const thisOcrRequestId = ++activeOcrRequestId;
       ocrAbortController?.abort();
@@ -1485,7 +2128,7 @@
 
       isOcrLoading = true;
       ocrBtn.disabled = true;
-      ocrBtn.innerText = "识别中...";
+      ocrBtn.textContent = "识别中...";
       setOcrStatus("正在识别图片中的英文作文，请稍候...", "");
       ocrNeedsReview = false;
 
@@ -1501,7 +2144,7 @@
 
         const data = await res.json();
 
-        if (thisOcrRequestId !== activeOcrRequestId) return;
+        if (thisOcrRequestId !== activeOcrRequestId || viewSessionNonce === 0) return;
 
         if (!res.ok) {
           setOcrStatus(data.error || "图片识别失败，请稍后再试。", "error");
@@ -1513,14 +2156,15 @@
         updateWordCounter();
         isApplyingOcrResult = false;
 
+        hasOcrSource = true;
+        ocrNeedsReview = true;
+
         if (data.warning) {
           setOcrStatus(data.warning, "warning");
-          ocrNeedsReview = true;
         } else {
-          setOcrStatus("识别完成。建议你先检查一下内容，再点击评分。", "success");
-          ocrNeedsReview = true;
+          setOcrStatus("图片识别完成。请先检查并修改识别结果，再开始评分。", "warning");
+          showToast("识别成功");
         }
-
       } catch (error) {
         if (error.name === "AbortError") return;
         if (thisOcrRequestId !== activeOcrRequestId) return;
@@ -1529,61 +2173,42 @@
         if (thisOcrRequestId === activeOcrRequestId) {
           isOcrLoading = false;
           ocrBtn.disabled = false;
-          ocrBtn.innerText = "图片识别";
+          ocrBtn.textContent = "图片识别";
           ocrAbortController = null;
         }
       }
     }
 
     // ── 输入框与重置 ─────────────────────────────────────────
-
     textarea.addEventListener("input", () => {
       updateWordCounter();
       if (isApplyingOcrResult) return;
       if (ocrNeedsReview) {
-        setOcrStatus("你已修改识别结果，现在可以直接评分了。", "success");
-        ocrNeedsReview = false;
+        setOcrStatus("你已修改识别结果。评分前仍建议再次确认无误。", "warning");
       }
     });
 
-    function resetResultArea() {
-      result.innerHTML = "";
-      rawResultText = "";
-      hasSuccess = false;
-      hasStructuredResult = false;
-      sectionCopyMap = {};
-      isEssayExpanded = false;
-      updateScrollButton();
-    }
-
     resetBtn.addEventListener("click", () => {
-      scoreAbortController?.abort();
-      activeScoreRequestId++;
-      isStreaming = false;
-      isLoading = false;
+      abortActiveScoreRequest();
       textarea.value = "";
-      updateWordCounter();
       imageUpload.value = "";
+      updateWordCounter();
+
       setOcrStatus(defaultOcrStatusText, "");
       ocrNeedsReview = false;
-      resetResultArea();
+      hasOcrSource = false;
 
-      if (!currentUser || currentUser.freeScoreLeft <= 0) {
-        button.disabled = true;
-        button.classList.add("quota-empty");
-        button.innerText = "今日次数已用完";
-      } else {
-        button.disabled = false;
-        button.classList.remove("quota-empty");
-        button.innerText = "开始评分";
-      }
+      selectedHistoryId = null;
+      renderHistoryList(historyRecords);
+
+      resetResultArea();
+      setScoreButtonState();
 
       showToast("已重置为新作文");
       editorCard.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     // ── 滚动按钮 ─────────────────────────────────────────────
-
     window.addEventListener("scroll", () => {
       if (isStreaming) {
         autoFollow = pageNearBottom();
@@ -1597,100 +2222,130 @@
       updateScrollButton();
     });
 
-    // ── 评分主流程 ───────────────────────────────────────────
+    // ── 评分确认逻辑 ─────────────────────────────────────────
+    function confirmScoreForManualInput(wordCount) {
+      return window.confirm(
+        `开始评分前，请确认：\n\n1. 这已经是你准备提交的版本\n2. 你已检查明显拼写或粘贴错误\n3. 当前词数：${wordCount} 词\n\n` +
+        `说明：系统评分前可能会做轻微格式整理，但不会替你纠正语法、拼写或润色表达。\n\n确认开始评分吗？`
+      );
+    }
 
+    function confirmScoreForOcrInput(wordCount) {
+      const confirmReviewed = window.confirm(
+        `⚠️ 检测到你当前内容来自图片识别。\n\n请先检查 OCR 识别结果，确认无误后再评分。\n` +
+        `如果存在识别错词、漏词或断句错误，会直接影响分数与建议。\n\n点击“确定”表示你已检查；点击“取消”返回继续检查。`
+      );
+      if (!confirmReviewed) return false;
+
+      return window.confirm(
+        `你将对 OCR 导入的文本开始评分。\n\n请再次确认：\n1. 识别结果已检查无误\n2. 当前词数：${wordCount} 词\n3. 这就是你要提交的版本\n\n确认开始评分吗？`
+      );
+    }
+
+    // ── 评分主流程 ───────────────────────────────────────────
     button.onclick = async () => {
       if (!currentUser) {
         showModal();
         return;
       }
 
-      if (isLoading || isStreaming) return;
+      if (isLoading || isStreaming || isOcrLoading) return;
+
+      if (currentUser.freeScoreLeft <= 0) {
+        alert("今日免费次数已用完，明天可继续使用。");
+        return;
+      }
 
       const essay = textarea.value.trim();
+      const wordCount = countWords(essay);
 
-      if (!essay) {
-        showToast("请先输入英文作文");
+      if (wordCount < 30) {
+        alert("作文词数过少，请至少输入 30 个词后再评分。");
         return;
       }
 
-      const currentWords = countWords(essay);
-      if (currentWords < 30) {
-        showToast("作文词数过少，请至少输入 30 个词后再评分");
-        return;
-      }
+      const confirmed = hasOcrSource
+        ? confirmScoreForOcrInput(wordCount)
+        : confirmScoreForManualInput(wordCount);
 
-      if (ocrNeedsReview) {
-        showToast("建议先检查 OCR 识别结果，再开始评分");
-      }
+      if (!confirmed) return;
 
-      const thisScoreRequestId = ++activeScoreRequestId;
-      scoreAbortController?.abort();
+      const thisScoreRequestId = activeScoreRequestId + 1;
+      abortActiveScoreRequest();
+      activeScoreRequestId = thisScoreRequestId;
       scoreAbortController = new AbortController();
 
-      isStreaming = true;
       isLoading = true;
       hasSuccess = false;
+      isStreaming = true;
       rawResultText = "";
-      autoFollow = true;
       isEssayExpanded = false;
       hasStructuredResult = false;
       sectionCopyMap = {};
-      result.innerHTML = `<div class="raw-stream-box loading" id="rawStreamBox">AI 正在评分中，请稍候...</div>`;
+      autoFollow = true;
+
+      result.innerHTML = `<div class="raw-stream-box"><span class="loading">AI 正在评分，请稍候...</span></div>`;
+      setScoreButtonState();
+      updateScrollButton();
       scrollPageToBottom(true, false);
 
-      button.disabled = true;
-      button.classList.remove("quota-empty");
-      button.innerText = "评分中...";
-      updateScrollButton();
-
       try {
-        const res = await fetch("/score", {
+        const response = await fetch("/score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ essay }),
           signal: scoreAbortController.signal
         });
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "评分失败");
+        if (thisScoreRequestId !== activeScoreRequestId) return;
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => "");
+          result.innerHTML = `<div class="raw-stream-box">${escapeHtml(text || "评分失败，请检查网络或稍后再试")}</div>`;
+          return;
         }
 
-        if (!res.body) {
-          throw new Error("未获取到评分数据流");
+        if (!response.body) {
+          result.innerHTML = `<div class="raw-stream-box">评分失败，请检查网络或稍后再试</div>`;
+          return;
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
+        result.innerHTML = `<div class="raw-stream-box" id="rawStreamBox"></div>`;
         const rawStreamBox = document.getElementById("rawStreamBox");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
 
         while (true) {
           const { value, done } = await reader.read();
+          if (thisScoreRequestId !== activeScoreRequestId) {
+            try { await reader.cancel(); } catch (_) {}
+            return;
+          }
           if (done) break;
-          if (thisScoreRequestId !== activeScoreRequestId) return;
 
-          const chunkText = decoder.decode(value, { stream: true });
-          rawResultText += chunkText;
-
-          if (rawStreamBox) {
+          const text = decoder.decode(value, { stream: true });
+          if (text) {
+            rawResultText += text;
             rawStreamBox.innerText = removeStreamMarks(rawResultText);
+            scrollPageToBottom(false, false);
+            updateScrollButton();
           }
-
-          if (autoFollow) {
-            scrollPageToBottom(true, false);
-          }
-          updateScrollButton();
         }
 
-        const isSuccess   = rawResultText.includes(SCORE_STREAM_DONE_MARK);
+        if (thisScoreRequestId !== activeScoreRequestId) return;
+
+        const isSuccess = rawResultText.includes(SCORE_STREAM_DONE_MARK);
         const cleanedText = removeStreamMarks(rawResultText);
 
         if (isSuccess && cleanedText) {
-          hasSuccess = true;
           renderStructuredResult(cleanedText);
+          hasSuccess = true;
+          hasOcrSource = false;
+          ocrNeedsReview = false;
+          setOcrStatus(defaultOcrStatusText, "");
 
-          if (currentUser && currentUser.freeScoreLeft > 0) {
+          if (currentUser.freeScoreLeft > 0) {
             currentUser.freeScoreLeft -= 1;
           }
           updateFreeScoreBar();
@@ -1699,7 +2354,6 @@
         } else {
           result.innerHTML = `<div class="raw-stream-box">评分失败，请检查网络或稍后再试</div>`;
         }
-
       } catch (e) {
         if (e.name === "AbortError") return;
         if (thisScoreRequestId !== activeScoreRequestId) return;
@@ -1713,29 +2367,23 @@
           scoreAbortController = null;
           autoFollow = pageNearBottom();
           updateScrollButton();
-          if (!currentUser || currentUser.freeScoreLeft <= 0) {
-            button.disabled = true;
-            button.classList.add("quota-empty");
-            button.innerText = "今日次数已用完";
-          } else {
-            button.disabled = false;
-            button.classList.remove("quota-empty");
-            button.innerText = "重新评分";
-          }
+          setScoreButtonState();
         }
       }
     };
 
-    // ── 事件绑定 ─────────────────────────────────────────────
+    // ── 历史侧栏事件 ─────────────────────────────────────────
+    historyRefreshBtn.addEventListener("click", () => loadHistoryList(true));
+    historyTopBtn.addEventListener("click", openHistoryDrawer);
+    historyCloseBtn.addEventListener("click", closeHistoryDrawer);
+    historyMobileMask.addEventListener("click", closeHistoryDrawer);
 
+    // ── OCR 事件 ────────────────────────────────────────────
     ocrBtn.addEventListener("click", handleOCR);
 
-    historyRefreshBtn.addEventListener("click", () => loadHistoryList(true));
-    historyTopBtn.addEventListener("click", () => {
-      historyCard.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-
-    // 启动
+    // ── 初始化 ───────────────────────────────────────────────
+    bindJumpButtons();
+    updateWordCounter();
     initPage();
   </script>
 </body>
