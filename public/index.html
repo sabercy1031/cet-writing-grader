@@ -436,6 +436,32 @@
 
     .system-note strong { color: #374151; }
 
+    .soft-help-note {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fafbff;
+      border: 1px dashed #d8e2ff;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-4);
+    }
+
+    .soft-help-note button {
+      border: none;
+      background: transparent;
+      color: var(--chip-text);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 4px;
+    }
+
+    .soft-help-note button:hover {
+      text-decoration: underline;
+    }
+
     textarea {
       width: 100%;
       min-height: 250px;
@@ -1168,6 +1194,26 @@
     </div>
   </div>
 
+  <!-- 反馈弹窗 -->
+  <div class="modal-mask" id="feedbackModalMask">
+    <div class="modal">
+      <div class="modal-title">反馈 / 获取更多次数</div>
+      <div class="modal-sub">当前是测试版，欢迎你反馈使用体验。</div>
+
+      <div class="system-note" style="margin-top:0;">
+        <strong>说明：</strong>测试版当前每日可免费评分 3 次，如需更多测试，可通过反馈联系作者。
+      </div>
+
+      <div class="system-note" style="margin-top:12px;">
+        <strong>联系方式：</strong><span id="feedbackContactText"></span>
+      </div>
+
+      <div style="margin-top:18px; display:flex; justify-content:flex-end;">
+        <button class="secondary-btn" type="button" id="feedbackCloseBtn">我知道了</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app-shell no-sidebar" id="appShell">
     <aside class="history-sidebar" id="historySidebar">
       <div class="history-sidebar-header">
@@ -1198,6 +1244,7 @@
             <button class="user-bar-btn mobile-history-btn" id="historyTopBtn" type="button">历史记录</button>
           </div>
           <div class="user-bar-right">
+            <button class="user-bar-btn" id="feedbackEntryBtn" type="button">反馈 / 更多次数</button>
             <span class="user-bar-info" id="userBarInfo"></span>
             <button class="user-bar-btn" id="userBarBtn" onclick="handleLogout()">退出登录</button>
           </div>
@@ -1257,6 +1304,11 @@
 
           <div id="freeScoreBar" class="free-score-bar"></div>
 
+          <div class="soft-help-note">
+            测试版当前每日可免费评分 3 次，如需更多测试，可通过反馈联系作者。
+            <button type="button" id="feedbackInlineBtn">查看反馈方式</button>
+          </div>
+
           <button id="btn" class="primary-btn">开始评分</button>
         </div>
 
@@ -1281,6 +1333,9 @@
         .replace(/\n?\[\[SCORE_STREAM_INTERRUPTED\]\]/g, "")
         .trim();
     }
+
+    // ── 反馈联系方式占位文本（后续直接改这里即可） ────────────
+    const FEEDBACK_CONTACT_PLACEHOLDER = "QQ：3977521823";
 
     // ── deviceId ────────────────────────────────────────────
     function generateDeviceId() {
@@ -1349,6 +1404,12 @@
     const userBarInfo       = document.getElementById("userBarInfo");
     const userBarBtn        = document.getElementById("userBarBtn");
     const modalMask         = document.getElementById("modalMask");
+
+    const feedbackModalMask = document.getElementById("feedbackModalMask");
+    const feedbackEntryBtn  = document.getElementById("feedbackEntryBtn");
+    const feedbackInlineBtn = document.getElementById("feedbackInlineBtn");
+    const feedbackCloseBtn  = document.getElementById("feedbackCloseBtn");
+    const feedbackContactText = document.getElementById("feedbackContactText");
 
     let autoFollow = true;
     let isStreaming = false;
@@ -1438,6 +1499,16 @@
     document.getElementById("inputUsername").addEventListener("keydown", e => {
       if (e.key === "Enter") handleAuth();
     });
+
+    // ── 反馈弹窗 ─────────────────────────────────────────────
+    function showFeedbackModal() {
+      feedbackContactText.textContent = FEEDBACK_CONTACT_PLACEHOLDER;
+      feedbackModalMask.classList.add("show");
+    }
+
+    function hideFeedbackModal() {
+      feedbackModalMask.classList.remove("show");
+    }
 
     // ── 用户态切换与前端状态清空 ─────────────────────────────
     function abortActiveScoreRequest() {
@@ -2414,6 +2485,14 @@
     historyTopBtn.addEventListener("click", openHistoryDrawer);
     historyCloseBtn.addEventListener("click", closeHistoryDrawer);
     historyMobileMask.addEventListener("click", closeHistoryDrawer);
+
+    // ── 反馈事件 ─────────────────────────────────────────────
+    feedbackEntryBtn.addEventListener("click", showFeedbackModal);
+    feedbackInlineBtn.addEventListener("click", showFeedbackModal);
+    feedbackCloseBtn.addEventListener("click", hideFeedbackModal);
+    feedbackModalMask.addEventListener("click", (e) => {
+      if (e.target === feedbackModalMask) hideFeedbackModal();
+    });
 
     // ── OCR 事件 ────────────────────────────────────────────
     ocrBtn.addEventListener("click", handleOCR);
