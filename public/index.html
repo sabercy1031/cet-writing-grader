@@ -1282,8 +1282,46 @@
         .trim();
     }
 
+    // ── deviceId ────────────────────────────────────────────
+    function generateDeviceId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return `dev_${window.crypto.randomUUID()}`;
+      }
+      return `dev_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+    }
+
+    function getOrCreateDeviceId() {
+      let deviceId = "";
+      try {
+        deviceId = localStorage.getItem("cetWritingDeviceId") || "";
+        if (!deviceId) {
+          deviceId = generateDeviceId();
+          localStorage.setItem("cetWritingDeviceId", deviceId);
+        }
+      } catch (_) {
+        deviceId = generateDeviceId();
+      }
+      return deviceId;
+    }
+
+    const DEVICE_ID = getOrCreateDeviceId();
+
+    async function apiFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      headers.set("X-Device-Id", DEVICE_ID);
+
+      if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+
+      return fetch(url, {
+        ...options,
+        headers
+      });
+    }
+
     // ── 全局用户状态 ─────────────────────────────────────────
-    let currentUser = null; // { username, freeScoreLeft }
+    let currentUser = null;
     let selectedHistoryId = null;
 
     // ── DOM 引用 ─────────────────────────────────────────────
@@ -1372,9 +1410,8 @@
 
       try {
         const endpoint = currentTab === "login" ? "/api/login" : "/api/register";
-        const res = await fetch(endpoint, {
+        const res = await apiFetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
@@ -1525,7 +1562,7 @@
 
     async function handleLogout() {
       try {
-        await fetch("/api/logout", { method: "POST" });
+        await apiFetch("/api/logout", { method: "POST" });
       } catch (_) {}
       currentUser = null;
       renderLoggedOut();
@@ -1554,7 +1591,7 @@
     // ── 页面初始化 ───────────────────────────────────────────
     async function initPage() {
       try {
-        const res = await fetch("/api/me");
+        const res = await apiFetch("/api/me");
         const data = await res.json();
         if (data.loggedIn) {
           currentUser = { username: data.username, freeScoreLeft: data.freeScoreLeft };
@@ -2016,7 +2053,7 @@
       historyRefreshBtn.disabled = true;
 
       try {
-        const res = await fetch("/api/history");
+        const res = await apiFetch("/api/history");
         const data = await res.json();
 
         if (nonce !== viewSessionNonce) return;
@@ -2046,7 +2083,7 @@
       renderHistoryList(historyRecords);
 
       try {
-        const res = await fetch(`/api/history/${historyId}`);
+        const res = await apiFetch(`/api/history/${historyId}`);
         const data = await res.json();
 
         if (nonce !== viewSessionNonce) return;
@@ -2081,7 +2118,7 @@
       renderHistoryList(historyRecords);
 
       try {
-        const res = await fetch(`/api/history/${historyId}`);
+        const res = await apiFetch(`/api/history/${historyId}`);
         const data = await res.json();
 
         if (nonce !== viewSessionNonce) return;
@@ -2136,7 +2173,7 @@
         const formData = new FormData();
         formData.append("image", file);
 
-        const res = await fetch("/ocr", {
+        const res = await apiFetch("/ocr", {
           method: "POST",
           body: formData,
           signal: ocrAbortController.signal
@@ -2168,12 +2205,13 @@
       } catch (error) {
         if (error.name === "AbortError") return;
         if (thisOcrRequestId !== activeOcrRequestId) return;
-        setOcrStatus("图片识别失败，请换一张更清晰的照片再试。", "error");
+        setOcrStatus(error.message || "图片识别失败，请换一张更清晰的照片再试。", "error");
       } finally {
         if (thisOcrRequestId === activeOcrRequestId) {
-          isOcrLoading = false;
           ocrBtn.disabled = false;
           ocrBtn.textContent = "图片识别";
+          isApplyingOcrResult = false;
+          isOcrLoading = false;
           ocrAbortController = null;
         }
       }
@@ -2290,9 +2328,8 @@
       scrollPageToBottom(true, false);
 
       try {
-        const response = await fetch("/score", {
+        const response = await apiFetch("/score", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ essay }),
           signal: scoreAbortController.signal
         });

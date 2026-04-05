@@ -30,6 +30,31 @@ function extractScoreValue(resultText) {
   return match ? match[1] : null;
 }
 
+function normalizeDeviceId(raw) {
+  return String(raw || "").trim().slice(0, 120);
+}
+
+function getRequiredDeviceId(req, res) {
+  const deviceId = normalizeDeviceId(req.get("X-Device-Id"));
+  if (!deviceId) {
+    res.status(400).json({ error: "设备标识缺失，请刷新页面后重试" });
+    return null;
+  }
+  return deviceId;
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0].trim().slice(0, 120);
+  }
+  return String(req.ip || "").trim().slice(0, 120);
+}
+
+function getEffectiveFreeScoreLeft(userLeft, deviceLeft) {
+  return Math.min(Number(userLeft || 0), Number(deviceLeft || 0));
+}
+
 async function saveScoreHistory(dbClient, { userId, essayText, resultText, scoreValue, wordCount }) {
   await dbClient.query(
     `
@@ -592,7 +617,49 @@ async function checkAndResetDaily(dbClient, userId) {
   return result.rows[0] || null;
 }
 
-async function getUserForSession(userId) {
+async function getOrCreateAndLockDeviceLimit(dbClient, deviceId) {
+  await dbClient.query(
+    `
+      INSERT INTO device_limits (device_id)
+      VALUES ($1)
+      ON CONFLICT (device_id) DO NOTHING
+    `,
+    [deviceId]
+  );
+
+  let result = await dbClient.query(
+    `
+      SELECT device_id, free_score_left, last_reset_date, created_at, updated_at
+      FROM device_limits
+      WHERE device_id = $1
+      FOR UPDATE
+    `,
+    [deviceId]
+  );
+
+  let device = result.rows[0] || null;
+
+  if (!device) return null;
+
+  if (device.last_reset_date < new Date().toISOString().slice(0, 10)) {
+    const resetResult = await dbClient.query(
+      `
+        UPDATE device_limits
+        SET free_score_left = 3,
+            last_reset_date = CURRENT_DATE,
+            updated_at = NOW()
+        WHERE device_id = $1
+        RETURNING device_id, free_score_left, last_reset_date, created_at, updated_at
+      `,
+      [deviceId]
+    );
+    device = resetResult.rows[0] || device;
+  }
+
+  return device;
+}
+
+async function getEffectiveUsageForUser(userId, deviceId) {
   const dbClient = await pool.connect();
   try {
     await dbClient.query("BEGIN");
@@ -613,9 +680,17 @@ async function getUserForSession(userId) {
     }
 
     const freshUser = await checkAndResetDaily(dbClient, userId);
+    const device = await getOrCreateAndLockDeviceLimit(dbClient, deviceId);
 
     await dbClient.query("COMMIT");
-    return freshUser;
+
+    if (!freshUser || !device) return null;
+
+    return {
+      user: freshUser,
+      device,
+      freeScoreLeft: getEffectiveFreeScoreLeft(freshUser.free_score_left, device.free_score_left)
+    };
   } catch (error) {
     try {
       await dbClient.query("ROLLBACK");
@@ -627,8 +702,12 @@ async function getUserForSession(userId) {
 }
 
 app.post("/api/register", async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   const username = String(req.body?.username || "").trim();
   const password = String(req.body?.password || "");
+  const ipAddress = getClientIp(req);
 
   if (!username || !password) {
     return res.status(400).json({ error: "请填写用户名和密码" });
@@ -642,10 +721,47 @@ app.post("/api/register", async (req, res) => {
     return res.status(400).json({ error: "密码至少需要 6 位" });
   }
 
-  try {
-    const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
+  const dbClient = await pool.connect();
 
-    const result = await pool.query(
+  try {
+    await dbClient.query("BEGIN");
+
+    const recentByDevice = await dbClient.query(
+      `
+        SELECT 1
+        FROM register_events
+        WHERE device_id = $1
+          AND created_at > NOW() - INTERVAL '10 minutes'
+        LIMIT 1
+      `,
+      [deviceId]
+    );
+
+    if (recentByDevice.rows.length > 0) {
+      await dbClient.query("ROLLBACK");
+      return res.status(429).json({ error: "当前设备注册过于频繁，请 10 分钟后再试" });
+    }
+
+    if (ipAddress) {
+      const recentByIp = await dbClient.query(
+        `
+          SELECT 1
+          FROM register_events
+          WHERE ip_address = $1
+            AND created_at > NOW() - INTERVAL '10 minutes'
+          LIMIT 1
+        `,
+        [ipAddress]
+      );
+
+      if (recentByIp.rows.length > 0) {
+        await dbClient.query("ROLLBACK");
+        return res.status(429).json({ error: "当前网络环境注册过于频繁，请 10 分钟后再试" });
+      }
+    }
+
+    const result = await dbClient.query(
       `
         INSERT INTO users (username, password_hash)
         VALUES ($1, $2)
@@ -655,19 +771,40 @@ app.post("/api/register", async (req, res) => {
     );
 
     const user = result.rows[0];
+    const device = await getOrCreateAndLockDeviceLimit(dbClient, deviceId);
+
+    await dbClient.query(
+      `
+        INSERT INTO register_events (device_id, ip_address, username)
+        VALUES ($1, $2, $3)
+      `,
+      [deviceId, ipAddress || null, username]
+    );
+
+    await dbClient.query("COMMIT");
+
     req.session.userId = user.id;
 
     res.json({
       username: user.username,
-      freeScoreLeft: user.free_score_left
+      freeScoreLeft: getEffectiveFreeScoreLeft(user.free_score_left, device ? device.free_score_left : 3)
     });
   } catch (error) {
+    try {
+      await dbClient.query("ROLLBACK");
+    } catch (_) {}
+
     console.error("[AUTH] register error:", error);
     res.status(400).json({ error: "用户名已存在或注册失败" });
+  } finally {
+    dbClient.release();
   }
 });
 
 app.post("/api/login", async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   const username = String(req.body?.username || "").trim();
   const password = String(req.body?.password || "");
 
@@ -700,15 +837,15 @@ app.post("/api/login", async (req, res) => {
 
     req.session.userId = user.id;
 
-    const freshUser = await getUserForSession(user.id);
+    const usage = await getEffectiveUsageForUser(user.id, deviceId);
 
-    if (!freshUser) {
+    if (!usage) {
       return res.status(400).json({ error: "登录状态异常，请重试" });
     }
 
     res.json({
-      username: freshUser.username,
-      freeScoreLeft: freshUser.free_score_left
+      username: usage.user.username,
+      freeScoreLeft: usage.freeScoreLeft
     });
   } catch (error) {
     console.error("[AUTH] login error:", error);
@@ -727,22 +864,25 @@ app.post("/api/logout", (req, res) => {
 });
 
 app.get("/api/me", async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   if (!req.session?.userId) {
     return res.json({ loggedIn: false });
   }
 
   try {
-    const user = await getUserForSession(req.session.userId);
+    const usage = await getEffectiveUsageForUser(req.session.userId, deviceId);
 
-    if (!user) {
+    if (!usage) {
       req.session.destroy(() => {});
       return res.json({ loggedIn: false });
     }
 
     res.json({
       loggedIn: true,
-      username: user.username,
-      freeScoreLeft: user.free_score_left
+      username: usage.user.username,
+      freeScoreLeft: usage.freeScoreLeft
     });
   } catch (error) {
     console.error("[AUTH] me error:", error);
@@ -751,6 +891,9 @@ app.get("/api/me", async (req, res) => {
 });
 
 app.post("/ocr", upload.single("image"), async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   if (!req.session?.userId) {
     return res.status(401).json({ error: "请先登录后再使用图片识别。" });
   }
@@ -803,6 +946,9 @@ app.post("/ocr", upload.single("image"), async (req, res) => {
 });
 
 app.get("/api/history", async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   if (!req.session?.userId) {
     return res.status(401).json({ error: "请先登录" });
   }
@@ -842,6 +988,9 @@ app.get("/api/history", async (req, res) => {
 });
 
 app.get("/api/history/:id", async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   if (!req.session?.userId) {
     return res.status(401).json({ error: "请先登录" });
   }
@@ -884,6 +1033,9 @@ app.get("/api/history/:id", async (req, res) => {
 });
 
 app.post("/score", async (req, res) => {
+  const deviceId = getRequiredDeviceId(req, res);
+  if (!deviceId) return;
+
   if (!req.session?.userId) {
     return res.status(401).send("请先登录后再评分。");
   }
@@ -912,10 +1064,7 @@ app.post("/score", async (req, res) => {
     apiKey
   });
 
-  // 新增：用于判定本次评分是否真正成功返回过有效内容
   let wroteAnyContent = false;
-
-  // 新增：并发安全所需的数据库连接与事务状态
   let dbClient = null;
   let txOpen = false;
   let clientDisconnected = false;
@@ -961,7 +1110,15 @@ app.post("/score", async (req, res) => {
       return res.status(401).send("登录状态失效，请重新登录。");
     }
 
-    if (user.free_score_left <= 0) {
+    const device = await getOrCreateAndLockDeviceLimit(dbClient, deviceId);
+
+    if (!device) {
+      await dbClient.query("ROLLBACK");
+      txOpen = false;
+      return res.status(500).send("设备次数状态异常，请稍后重试。");
+    }
+
+    if (user.free_score_left <= 0 || device.free_score_left <= 0) {
       await dbClient.query("ROLLBACK");
       txOpen = false;
       return res.status(403).send("今日免费次数已用完，明天可继续使用。");
@@ -1022,7 +1179,6 @@ app.post("/score", async (req, res) => {
       }
     }
 
-    // 只有评分真正成功完成时才扣次数；事务锁会阻塞同一用户的并发评分请求
     if (wroteAnyContent && !clientDisconnected && !res.destroyed && !res.writableEnded) {
       await dbClient.query(
         `
@@ -1031,6 +1187,16 @@ app.post("/score", async (req, res) => {
           WHERE id = $1
         `,
         [req.session.userId]
+      );
+
+      await dbClient.query(
+        `
+          UPDATE device_limits
+          SET free_score_left = free_score_left - 1,
+              updated_at = NOW()
+          WHERE device_id = $1
+        `,
+        [deviceId]
       );
 
       const cleanResultText = removeStreamMarks(finalResultText);

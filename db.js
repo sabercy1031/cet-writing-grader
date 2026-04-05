@@ -7,7 +7,7 @@ const pool = new Pool({
     : false
 });
 
-// 初始化用户表
+// 初始化数据库表
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -33,6 +33,28 @@ async function initDB() {
     )
   `);
   console.log("[DB] 历史记录表初始化完成");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS device_limits (
+      device_id VARCHAR(120) PRIMARY KEY,
+      free_score_left INTEGER NOT NULL DEFAULT 3,
+      last_reset_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  console.log("[DB] 设备次数表初始化完成");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS register_events (
+      id SERIAL PRIMARY KEY,
+      device_id VARCHAR(120),
+      ip_address VARCHAR(120),
+      username VARCHAR(50),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  console.log("[DB] 注册事件表初始化完成");
 }
 
 module.exports = { pool, initDB };
